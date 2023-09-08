@@ -8,8 +8,20 @@ export default function Home() {
 
   async function sendMessageToSlack(messageText) {
     try {
+      // const response = await axios.post(
+      //   'https://slack.com/api/chat.postMessage',
+      //   {
+      //     channel: '#development',
+      //     text: messageText, // Use the 'messageText' argument here
+      //   },
+      //   {
+      //     headers: {
+      //       Authorization: 'Bearer ' + SLACK_API_TOKEN,
+      //     },
+      //   }
+      // );
       const response = await axios.post(
-        'https://slack.com/api/chat.postMessage',
+        '/api/hello',
         {
           channel: '#development',
           text: messageText, // Use the 'messageText' argument here
