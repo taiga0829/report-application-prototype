@@ -1,6 +1,23 @@
 import axios from "axios";
+const SLACK_API_TOKEN = "xoxb-5626190471478-5852348483253-cr5G3AeZcHaVrgIj4J7t9PLC";
 
-export default function handler(req, res) {
-    console.log(req.body.text);
-    res.status(200).json({ text: 'Hello' });
+export default async function handler(req, res) {
+    try {
+        const response = await axios.post(
+            'https://slack.com/api/chat.postMessage',
+            {
+                channel: req.body.channel,
+                text: req.body.text,
+            },
+            {
+                headers: {
+                    Authorization: 'Bearer ' + SLACK_API_TOKEN,
+                },
+            }
+        );
+    } catch (error) {
+        console.error('Error sending message to Slack:', error);
+        console.error('Error response data:', error.response.data);
+        console.error('Error response status:', error.response.status);
+    }
 }

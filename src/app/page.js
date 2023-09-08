@@ -2,24 +2,12 @@
 import React, { useEffect } from 'react';
 import { useState } from 'react'
 import axios from 'axios';
-const SLACK_API_TOKEN = "";
+const SLACK_API_TOKEN = "xoxb-5626190471478-5852348483253-cr5G3AeZcHaVrgIj4J7t9PLC";
 export default function Home() {
   const [input, setInput] = useState('');
 
   async function sendMessageToSlack(messageText) {
     try {
-      // const response = await axios.post(
-      //   'https://slack.com/api/chat.postMessage',
-      //   {
-      //     channel: '#development',
-      //     text: messageText, // Use the 'messageText' argument here
-      //   },
-      //   {
-      //     headers: {
-      //       Authorization: 'Bearer ' + SLACK_API_TOKEN,
-      //     },
-      //   }
-      // );
       const response = await axios.post(
         '/api/hello',
         {
