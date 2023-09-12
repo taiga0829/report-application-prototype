@@ -1,10 +1,46 @@
 'use client'
-import React, { useEffect } from 'react';
-import { useState } from 'react'
+import React, { useState } from 'react';
 import axios from 'axios';
-const SLACK_API_TOKEN = "xoxb-5626190471478-5852348483253-cr5G3AeZcHaVrgIj4J7t9PLC";
+import 'bootstrap/dist/css/bootstrap.min.css'; // Import Bootstrap CSS
+import { Container, Form, Button, ListGroup } from 'react-bootstrap'; // Import Bootstrap components
+
 export default function Home() {
-  const [input, setInput] = useState('');
+  const [topic, setTopic] = useState('');
+  const [url, setUrl] = useState('');
+  const [objectArray, setObjectArray] = useState([
+    { id: 1, topic: 'aaa', url: 'dcdcd' },
+    // Add more objects as needed
+  ]);
+
+  function removeItem(idToRemove) {
+    const updatedList = objectArray.filter((object) => object.id !== idToRemove);
+    setObjectArray(updatedList);
+  }
+
+  function addWhatIdid() {
+    if (topic !== '' && url !== '') {
+      const newObject = { id: objectArray.length + 1, topic, url };
+      setObjectArray([...objectArray, newObject]);
+      setTopic(''); // Clear the topic input field
+      setUrl('');   // Clear the URL input field
+    }
+  }
+
+  
+
+  function modifyItem(idToModify, newTopic, newUrl) {
+    const updatedList = objectArray.map((object) => {
+      if (object.id === idToModify) {
+        return {
+          ...object,
+          topic: newTopic,
+          url: newUrl,
+        };
+      }
+      return object;
+    });
+    setObjectArray(updatedList);
+  }
 
   async function sendMessageToSlack(messageText) {
     try {
@@ -12,13 +48,8 @@ export default function Home() {
         '/api/hello',
         {
           channel: '#development',
-          text: messageText, // Use the 'messageText' argument here
+          text: messageText,
         },
-        {
-          headers: {
-            Authorization: 'Bearer ' + SLACK_API_TOKEN,
-          },
-        }
       );
 
       console.log('Slack API response:', response.data);
@@ -27,30 +58,73 @@ export default function Home() {
     }
   }
 
-
   function handleSubmit(e) {
-    // Prevent the browser from reloading the page
-    e.preventDefault();
+    e.preventDefault(); // Prevent the form from reloading the page
 
     try {
-      sendMessageToSlack(input);
+      sendMessageToSlack(`Topic: ${topic}\nURL: ${url}`);
     } catch (error) {
       console.error('Error:', error);
     }
-    setInput("");
-  }
-  return (
-    <form method="post" onSubmit={handleSubmit}>
-      <div>
-        <label>
-          Text input:
-          <input
-            value={input}
-            name='text' onChange={e => setInput(e.target.value)} />
-        </label>
-        <button type="submit" >Submit form</button>
-      </div>
-    </form>
-  )
-}
 
+    setTopic(''); // Clear the topic input field
+    setUrl('');   // Clear the URL input field
+  }
+
+  return (
+    <Container>
+      <Form onSubmit={handleSubmit}>
+        <Form.Group>
+          <Form.Label>Topic:</Form.Label>
+          <Form.Control
+            type="text"
+            value={topic}
+            placeholder="Enter Topic"
+            onChange={(e) => setTopic(e.target.value)}
+          />
+        </Form.Group>
+        <Form.Group>
+          <Form.Label>URL:</Form.Label>
+          <Form.Control
+            type="text"
+            value={url}
+            placeholder="Enter URL"
+            onChange={(e) => setUrl(e.target.value)}
+          />
+        </Form.Group>
+        <Button variant="primary" type="button" onClick={addWhatIdid}>
+          Add
+        </Button>
+        <Button variant="primary" type="submit">
+          Submit form
+        </Button>
+      </Form>
+      <ListGroup>
+        {objectArray.map((object) => (
+          <ListGroup.Item key={object.id}>
+            <div>
+              <strong>Topic:</strong> {object.topic}, <strong>URL:</strong> {object.url}
+            </div>
+            <div className="button-container">
+              <Button
+                variant="danger"
+                onClick={() => removeItem(object.id)}
+              >
+                Delete
+              </Button>
+              <Button
+                variant="warning"
+                onClick={() => modifyItem(object.id)}
+              >
+                Modify
+              </Button>
+            </div>
+          </ListGroup.Item>
+        ))}
+      </ListGroup>
+      <Button variant="primary" onClick={() => setObjectArray([])}>
+        Clear
+      </Button>
+    </Container>
+  );
+}

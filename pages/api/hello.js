@@ -1,4 +1,5 @@
 import axios from "axios";
+// Put private Token to here
 const SLACK_API_TOKEN = "xoxb-5626190471478-5852348483253-cr5G3AeZcHaVrgIj4J7t9PLC";
 
 export default async function handler(req, res) {
