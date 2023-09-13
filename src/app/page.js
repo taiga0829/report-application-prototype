@@ -1,15 +1,23 @@
 'use client'
 import React, { useState } from 'react';
 import axios from 'axios';
-import 'bootstrap/dist/css/bootstrap.min.css'; // Import Bootstrap CSS
-import { Container, Form, Button, ListGroup } from 'react-bootstrap'; // Import Bootstrap components
+import 'bootstrap/dist/css/bootstrap.min.css';
+import { Container, Form, Button, ListGroup, Card } from 'react-bootstrap';
 
 export default function Home() {
   const [topic, setTopic] = useState('');
   const [url, setUrl] = useState('');
+  const [summary, setSummary] = useState('');
+  const [childTopic, setChildTopic] = useState(''); // New state for child topics
+  const [childUrl, setChildUrl] = useState(''); // New state for child URLs
   const [objectArray, setObjectArray] = useState([
-    { id: 1, topic: 'aaa', url: 'dcdcd' },
-    // Add more objects as needed
+    {
+      id: 1,
+      topic: 'aaa',
+      url: 'dcdcd',
+      childTopics: [],
+      childUrls: [], // Initialize with an empty array for child URLs
+    },
   ]);
 
   function removeItem(idToRemove) {
@@ -19,27 +27,30 @@ export default function Home() {
 
   function addWhatIdid() {
     if (topic !== '' && url !== '') {
-      const newObject = { id: objectArray.length + 1, topic, url };
+      const newObject = {
+        id: objectArray.length + 1,
+        topic,
+        url,
+        childTopics: [],
+        childUrls: [], // Initialize with empty arrays for child topics and URLs
+      };
+      
       setObjectArray([...objectArray, newObject]);
-      setTopic(''); // Clear the topic input field
-      setUrl('');   // Clear the URL input field
+      setTopic('');
+      setUrl('');
     }
   }
 
-  
-
-  function modifyItem(idToModify, newTopic, newUrl) {
-    const updatedList = objectArray.map((object) => {
-      if (object.id === idToModify) {
-        return {
-          ...object,
-          topic: newTopic,
-          url: newUrl,
-        };
-      }
-      return object;
-    });
-    setObjectArray(updatedList);
+  function addChildTopicAndUrl(idToAdd) {
+    // Find the parent object by id
+    const parentObject = objectArray.find((object) => object.id === idToAdd);
+    if (parentObject) {
+      // Add the child topic and URL to the parent object
+      parentObject.childTopics.push(childTopic);
+      parentObject.childUrls.push(childUrl);
+      setChildTopic(''); // Clear the child topic input field
+      setChildUrl(''); // Clear the child URL input field
+    }
   }
 
   async function sendMessageToSlack(messageText) {
@@ -59,72 +70,150 @@ export default function Home() {
   }
 
   function handleSubmit(e) {
-    e.preventDefault(); // Prevent the form from reloading the page
+    e.preventDefault();
 
     try {
-      sendMessageToSlack(`Topic: ${topic}\nURL: ${url}`);
+      sendMessageToSlack(`Topic: ${topic}\n URL: ${url}`);
     } catch (error) {
       console.error('Error:', error);
     }
 
-    setTopic(''); // Clear the topic input field
-    setUrl('');   // Clear the URL input field
+    setTopic('');
+    setUrl('');
+  }
+
+  function Summarize(e) {
+    e.preventDefault();
+
+    try {
+      // sendMessageToSlack(`Topic: ${topic}\n URL: ${url}`);
+    } catch (error) {
+      console.error('Error:', error);
+    }
+
+    setTopic('');
+    setUrl('');
   }
 
   return (
-    <Container>
-      <Form onSubmit={handleSubmit}>
-        <Form.Group>
-          <Form.Label>Topic:</Form.Label>
-          <Form.Control
-            type="text"
-            value={topic}
-            placeholder="Enter Topic"
-            onChange={(e) => setTopic(e.target.value)}
-          />
-        </Form.Group>
-        <Form.Group>
-          <Form.Label>URL:</Form.Label>
-          <Form.Control
-            type="text"
-            value={url}
-            placeholder="Enter URL"
-            onChange={(e) => setUrl(e.target.value)}
-          />
-        </Form.Group>
-        <Button variant="primary" type="button" onClick={addWhatIdid}>
-          Add
-        </Button>
-        <Button variant="primary" type="submit">
-          Submit form
-        </Button>
+    <Container className="mt-4">
+      {/* give data to AI */}
+      <Form onSubmit={Summarize}>
+        <Card>
+          <Card.Body>
+            <Form.Group>
+              <Form.Label>Topic:&nbsp;</Form.Label>
+              <Form.Control
+                type="text"
+                value={topic}
+                placeholder="Enter Main Topic"
+                onChange={(e) => setTopic(e.target.value)}
+              />
+            </Form.Group>
+            <Form.Group>
+              <Form.Label>URL:&nbsp;</Form.Label>
+              <Form.Control
+                type="text"
+                value={url}
+                placeholder="Enter Main URL"
+                onChange={(e) => setUrl(e.target.value)}
+              />
+            </Form.Group>
+            <Button className="mt-2" variant="primary" type="button" onClick={addWhatIdid}>
+              Add
+            </Button>
+          </Card.Body>
+        </Card>
       </Form>
-      <ListGroup>
+      <ListGroup className="mt-2">
         {objectArray.map((object) => (
-          <ListGroup.Item key={object.id}>
-            <div>
-              <strong>Topic:</strong> {object.topic}, <strong>URL:</strong> {object.url}
-            </div>
-            <div className="button-container">
-              <Button
-                variant="danger"
-                onClick={() => removeItem(object.id)}
-              >
-                Delete
-              </Button>
-              <Button
-                variant="warning"
-                onClick={() => modifyItem(object.id)}
-              >
-                Modify
-              </Button>
-            </div>
-          </ListGroup.Item>
+          <Card key={object.id} className="mt-3">
+            <Card.Body>
+              <div>
+                <strong>Topic:&nbsp;</strong>{object.topic}&nbsp;<strong>URL:</strong> {object.url}
+              </div>
+              {/* Child Topics and URLs */}
+              {object.childTopics.length > 0 && (
+                <div>
+                  <strong>Topics:&nbsp;</strong>
+                  <ul>
+                    {object.childTopics.map((child, index) => (
+                      <li key={index}>{child}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {object.childUrls.length > 0 && (
+                <div>
+                  <strong>URLs:</strong>
+                  <ul>
+                    {object.childUrls.map((childUrl, index) => (
+                      <li key={index}>{childUrl}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              <div>
+                <Form.Group>
+                  <Form.Label>Topic:</Form.Label>
+                  <Form.Control
+                    type="text"
+                    value={childTopic}
+                    placeholder="Enter Child Topic"
+                    onChange={(e) => setChildTopic(e.target.value)}
+                  />
+                </Form.Group>
+                <Form.Group>
+                  <Form.Label>URL:</Form.Label>
+                  <Form.Control
+                    type="text"
+                    value={childUrl}
+                    placeholder="Enter Child URL"
+                    onChange={(e) => setChildUrl(e.target.value)}
+                  />
+                </Form.Group>
+                <Button
+                  variant="primary"
+                  type="button"
+                  onClick={() => addChildTopicAndUrl(object.id)}
+                  className="mt-3"
+                >
+                  Add
+                </Button>
+              </div>
+              <div className="button-container">
+                <Button
+                  variant="danger"
+                  onClick={() => removeItem(object.id)}
+                  className="mt-1"
+                >
+                  Delete
+                </Button>
+              </div>
+            </Card.Body>
+          </Card>
         ))}
       </ListGroup>
-      <Button variant="primary" onClick={() => setObjectArray([])}>
+      <Form.Group className="mt-2">
+        <Button variant="primary" type="submit">
+          Summarize
+        </Button>
+      </Form.Group>
+      <Button variant="secondary" className="mt-1" onClick={() => setObjectArray([])}>
         Clear
       </Button>
+      {/* TODO: add onSubmit function */}
+      <Form.Group className="mt-3">
+        <Form.Label style={{ fontSize: 19 }}><strong>Summary</strong></Form.Label>
+        <Form.Control
+          as="textarea"
+          value={summary}
+          onChange={(e) => setSummary(e.target.value)}
+        />
+        <Button variant="primary" className="mt-1" onClick={() => setObjectArray([])}>
+          Submit
+        </Button>
+      </Form.Group>
     </Container>
   );
 }
