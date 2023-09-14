@@ -5,19 +5,26 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 import { Container, Form, Button, ListGroup, Card } from 'react-bootstrap';
 
 export default function Home() {
-  const [topic, setTopic] = useState('');
-  const [url, setUrl] = useState('');
-  const [summary, setSummary] = useState('');
-  const [childTopic, setChildTopic] = useState(''); // Added childTopic state
-  const [childUrl, setChildUrl] = useState(''); // Added childUrl state
-  const [objectArray, setObjectArray] = useState([
+  const [topics, setTopics] = useState([
     {
       id: 1,
-      topic: 'aaa',
-      url: 'dcdcd',
-      childData: [], // Initialize with an empty array for child data
+      label: "labelSample",
+      url: "https://example.com",
+      childData: [
+        {
+          id: 1,
+          label: "childLabelSample",
+          url: "https://child.example.com",
+        },
+        {
+          id: 2,
+          label: "childLabelSample",
+          url: "https://child.example.com",
+        },
+      ],
     },
   ]);
+  const [summary, setSummary] = useState("");
 
   function removeItem(idToRemove) {
     const updatedList = objectArray.filter((object) => object.id !== idToRemove);
