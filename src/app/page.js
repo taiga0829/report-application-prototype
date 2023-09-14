@@ -5,25 +5,26 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 import { Container, Form, Button, ListGroup, Card } from 'react-bootstrap';
 
 export default function Home() {
-  const [topics, setTopics] = useState([
-    {
+  const [topics, setTopics] = useState({
+    1: {
       id: 1,
       label: "labelSample",
       url: "https://example.com",
-      childData: [
-        {
-          id: 1,
-          label: "childLabelSample",
-          url: "https://child.example.com",
-        },
-        {
-          id: 2,
-          label: "childLabelSample",
-          url: "https://child.example.com",
-        },
-      ],
+      childIds: [2, 3],
     },
-  ]);
+    2: {
+      id: 2,
+      label: "childLabelSample",
+      url: "https://child.example.com",
+      childIds: [],
+    },
+    3: {
+      id: 3,
+      label: "childLabelSample",
+      url: "https://child.example.com",
+      childIds: [],
+    },
+  });
   const [summary, setSummary] = useState("");
 
   function removeItem(idToRemove) {
