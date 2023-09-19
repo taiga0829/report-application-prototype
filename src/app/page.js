@@ -1,10 +1,13 @@
 "use client"
 import React, { useState, useEffect } from 'react';
 import 'bootstrap/dist/css/bootstrap.min.css';
-import { Container, Form, Button, Card, Col, Row, Badge } from 'react-bootstrap';
+import axios from 'axios'; // Import the axios library
+import { Container, Form, Button, Card, Col, Row, Alert } from 'react-bootstrap';
 
 export default function Home() {
   const [topics, setTopics] = useState([]);
+  // empty => throw red alert, suceed => green alert
+  const [showAlert, setShowAlert] = useState(false);
   useEffect(() => {
     setTopics([
       {
@@ -45,94 +48,92 @@ export default function Home() {
           >
             X
           </Button>
-          <Form onSubmit={handleSubmit}>
-            Topic:
-            <Form.Group as={Row} className="mb-3 mt-4">
-              <Form.Label style={{ textAlign: 'right' }} column sm="2">
-                Label:
-              </Form.Label>
-              <Col sm="10">
-                <Form.Control
-                  type="text"
-                  placeholder="Enter label:"
-                  value={topic.label}
-                  onChange={(e) => handleLabelChange(e, topic.id)}
-                  style={{ textAlign: 'left' }}
-                />
-              </Col>
-            </Form.Group>
-            <Form.Group as={Row} className="mb-3">
-              <Form.Label style={{ textAlign: 'right' }} column sm="2">
-                URL:
-              </Form.Label>
-              <Col sm="10">
-                <Form.Control
-                  type="text"
-                  placeholder="Enter URL:"
-                  onChange={(e) => handleURLChange(e, topic.id)}
-                  value={topic.url}
-                />
-              </Col>
-            </Form.Group>
-            <div>
-              {topic.childIds.length > 0 && (
-                <>
-                  {topic.childIds.map((childId) => {
-                    const childTopic = topics.find((t) => t.id === childId);
-                    if (childTopic) {
-                      return renderTopic(childTopic);
-                    }
-                    return null; // Child topic doesn't exist, so don't render it
-                  })}
-                  <div className="text-end mt-2">
-                    {topic.childIds.length > 0 && (
-                      <Button onClick={() => addTopic(topic.id)} style={{ align: 'right' }}>
-                        Add Child
-                      </Button>
-                    )}
-                  </div>
-                </>
-              )}
-            </div>
-          </Form>
+          Topic:
+          <Form.Group as={Row} className="mb-3 mt-4">
+            <Form.Label style={{ textAlign: 'right' }} column sm="2">
+              Label:
+            </Form.Label>
+            <Col sm="10">
+              <Form.Control
+                type="text"
+                placeholder="Enter label:"
+                value={topic.label}
+                onChange={(e) => handleLabelChange(e, topic.id)}
+                style={{ textAlign: 'left' }}
+              />
+            </Col>
+          </Form.Group>
+          <Form.Group as={Row} className="mb-3">
+            <Form.Label style={{ textAlign: 'right' }} column sm="2">
+              URL:
+            </Form.Label>
+            <Col sm="10">
+              <Form.Control
+                type="text"
+                placeholder="Enter URL:"
+                onChange={(e) => handleURLChange(e, topic.id)}
+                value={topic.url}
+              />
+            </Col>
+          </Form.Group>
+          <div>
+            {topic.childIds.length > 0 && (
+              <>
+                {topic.childIds.map((childId) => {
+                  const childTopic = topics.find((t) => t.id === childId);
+                  if (childTopic) {
+                    return renderTopic(childTopic);
+                  }
+                  return null; // Child topic doesn't exist, so don't render it
+                })}
+                <div className="text-end mt-2">
+                  {topic.childIds.length > 0 && (
+                    <Button onClick={() => addTopic(topic.id)} style={{ align: 'right' }}>
+                      Add Child
+                    </Button>
+                  )}
+                </div>
+              </>
+            )}
+          </div>
+
         </Card.Body>
       </Card>
     );
   }
-
   async function sendMessageToSlack(messageText) {
     try {
-
-      const response = await axios.post(
+      const response = await axios.post( // Use axios for the HTTP request
         'https://slack.com/api/chat.postMessage',
         '/api/hello',
         {
           channel: '#development',
           text: messageText,
-
         }
-      )
+      );
+      // Handle the response as needed
     } catch (error) {
       console.error('Error sending message to Slack:', error);
     }
   }
-  function addChildTopic(parentId, newChildId) {
-    const updatedTopics = topics.map((topic) => {
-      if (topic.id === parentId) {
-        return {
-          ...topic,
-          childIds: [...topic.childIds, newChildId],
-        };
-      }
-      return topic;
-    });
-
-    setTopics(updatedTopics);
-  }
-
   function removeTopic(idToRemove) {
-    const updatedTopics = topics.filter((topic) => topic.id !== idToRemove);
-    setTopics(updatedTopics);
+    const updatedTopics = [];
+
+    // Define a recursive function to remove children
+    function removeTopicRecursive(topicId) {
+      const topicToRemove = topics.find((topic) => topic.id === topicId);
+      if (topicToRemove) {
+        updatedTopics.push(topicToRemove);
+        topicToRemove.childIds.forEach((childId) => {
+          removeTopicRecursive(childId);
+        });
+      }
+    }
+
+    // Start the recursive removal process with the parent topic
+    removeTopicRecursive(idToRemove);
+
+    setTopics((prevTopics) => prevTopics.filter((topic) => !updatedTopics.includes(topic)));
   }
 
   const handleURLChange = (e, topicId) => {
@@ -185,61 +186,82 @@ export default function Home() {
 
   function handleSubmit(e) {
     e.preventDefault();
-    setStatus('sending');
-    try {
-      let SubmitText = "<Tasks>\n";
-      for (let i = 0; i < topics.length; i++) {
-        SubmitText += "・" + topics[i].label.toString() + "(" + topics[i].url.toString() + " )\n";
+    // Check if any of the input fields are empty
+    const isEmpty = topics.some((topic) => topic.label === '' || topic.url === '');
+    if (isEmpty || summary === '') {
+      // Show the Bootstrap alert
+      setShowAlert(true);
+    } else {
+      setShowAlert(false); // Hide the alert if the form is valid
+      try {
+        let SubmitText = "<Tasks>\n";
+        let arr = [];
 
-        if (topics[i].childIds.length > 0) {
-          for (let j = 0; j < topics[i].childIds.length; j++) {
-            const childTopic = topics.find((t) => t.id === topics[i].childIds[j]);
-            SubmitText += "    ・" + childTopic.label.toString() + "(" + childTopic.url.toString() + " )\n";
+
+        for (let i = 0; i < topics.length; i++) {
+          if (!arr.includes(topics[i].id)) {
+            SubmitText += "・" + topics[i].label.toString() + "(" + topics[i].url.toString() + " )\n";
+            arr.push(topics[i].id);
+          }
+
+          if (topics[i].childIds.length > 0) {
+            for (let j = 0; j < topics[i].childIds.length; j++) {
+              const childTopic = topics.find((t) => t.id === topics[i].childIds[j]);
+              if (!arr.includes(childTopic.id)) {
+                SubmitText += "    ・" + childTopic.label.toString() + "(" + childTopic.url.toString() + " )\n";
+                arr.push(childTopic.id);
+              }
+
+            }
           }
         }
+
+        SubmitText += "\n\n<Summary>\n・" + summary.toString();
+        console.log(SubmitText);
+
+        sendMessageToSlack(SubmitText);
+
+      } catch (error) {
+        console.error('Error:', error);
       }
-
-      SubmitText += "\n\n<Summary>\n・" + summary.toString();
-      sendMessageToSlack(SubmitText);
-
-      if (isSent) {
-        return <h1>Thanks for feedback!</h1>
-      }
-
-    } catch (error) {
-      console.error('Error:', error);
     }
+
   }
 
   return (
     <Container className="mt-4">
-      {/* It checks if the current topic is NOT a child of any other topic. */}
-      {topics.filter((topic) => !topics.some((t) => t.childIds.includes(topic.id))).map((topic) => (
-        renderTopic(topic)
-      ))}
-      <div className="d-flex justify-content-between mt-3">
-        <Button variant="primary" className="mx-5">
-          Summarize
-        </Button>
-        <Button variant="primary" onClick={() => addTopic(null)} className="mx-5">
-          Add
-        </Button>
-      </div>
-      <div className="form-floating">
-        <textarea
-          onChange={(e) => setSummary(e.target.value)}
-          className="form-control mt-3"
-          id="floatingTextarea2"
-          style={{ height: '100px' }}
-        ></textarea>
-        <label htmlFor="floatingTextarea2">Summary</label>
-      </div>
-      <div className="d-flex justify-content-between mt-3">
-        <Button variant="primary" type="submit" className="mx-5">
-          Submit
-        </Button>
-      </div>
+      <Form onSubmit={handleSubmit}>
+        {topics.filter((topic) => !topics.some((t) => t.childIds.includes(topic.id))).map((topic) => (
+          renderTopic(topic)
+        ))}
+        <div className="d-flex justify-content-between mt-3">
+          <Button variant="primary" className="mx-5">
+            Summarized by AI
+          </Button>
+          <Button variant="primary" onClick={() => addTopic(null)} className="mx-5">
+            Add
+          </Button>
+        </div>
+        <div className="form-floating">
+          <textarea
+            onChange={(e) => setSummary(e.target.value)}
+            className="form-control mt-3"
+            id="floatingTextarea2"
+            style={{ height: '100px' }}
+          ></textarea>
+          <label htmlFor="floatingTextarea2">Summary</label>
+        </div>
+        <div className="d-flex justify-content-between mt-3">
+          <Button variant="primary" type="submit" className="mx-5">
+            Submit
+          </Button>
+        </div>
+        {showAlert && (
+          <Alert variant="danger" className="mt-3">
+            Please fill in all the required fields.
+          </Alert>
+        )}
+      </Form>
     </Container>
   );
-
 }
