@@ -6,24 +6,29 @@ import { Container, Form, Button, Card, Col, Row, Badge } from 'react-bootstrap'
 export default function Home() {
   const [topics, setTopics] = useState([]);
   useEffect(() => {
-    // Initialize topics on the client side
     setTopics([
       {
         id: 1,
-        label: "labelSample",
-        url: "https://example.com",
-        childIds: [2, 3],
+        label: "",
+        url: "",
+        childIds: [2],
       },
       {
         id: 2,
-        label: "childLabel",
-        url: "https://child.example.com",
+        label: "",
+        url: "",
         childIds: [],
       },
       {
         id: 3,
-        label: "childLabelSample",
-        url: "https://child.example.com",
+        label: "",
+        url: "",
+        childIds: [4],
+      },
+      {
+        id: 4,
+        label: "",
+        url: "",
         childIds: [],
       },
     ]);
@@ -42,7 +47,7 @@ export default function Home() {
           </Button>
           <Form onSubmit={handleSubmit}>
             Topic:
-            <Form.Group as={Row} className="mb-3 mt-4" controlId={`formPlaintextLabel_${topic.id}`}>
+            <Form.Group as={Row} className="mb-3 mt-4">
               <Form.Label style={{ textAlign: 'right' }} column sm="2">
                 Label:
               </Form.Label>
@@ -56,7 +61,7 @@ export default function Home() {
                 />
               </Col>
             </Form.Group>
-            <Form.Group as={Row} className="mb-3" controlId={`formPlaintextURL_${topic.id}`}>
+            <Form.Group as={Row} className="mb-3">
               <Form.Label style={{ textAlign: 'right' }} column sm="2">
                 URL:
               </Form.Label>
@@ -74,8 +79,18 @@ export default function Home() {
                 <>
                   {topic.childIds.map((childId) => {
                     const childTopic = topics.find((t) => t.id === childId);
-                    return renderTopic(childTopic);
+                    if (childTopic) {
+                      return renderTopic(childTopic);
+                    }
+                    return null; // Child topic doesn't exist, so don't render it
                   })}
+                  <div className="text-end mt-2">
+                    {topic.childIds.length > 0 && (
+                      <Button onClick={() => addTopic(topic.id)} style={{ align: 'right' }}>
+                        Add Child
+                      </Button>
+                    )}
+                  </div>
                 </>
               )}
             </div>
@@ -85,6 +100,22 @@ export default function Home() {
     );
   }
 
+  async function sendMessageToSlack(messageText) {
+    try {
+
+      const response = await axios.post(
+        'https://slack.com/api/chat.postMessage',
+        '/api/hello',
+        {
+          channel: '#development',
+          text: messageText,
+
+        }
+      )
+    } catch (error) {
+      console.error('Error sending message to Slack:', error);
+    }
+  }
   function addChildTopic(parentId, newChildId) {
     const updatedTopics = topics.map((topic) => {
       if (topic.id === parentId) {
@@ -154,6 +185,7 @@ export default function Home() {
 
   function handleSubmit(e) {
     e.preventDefault();
+    setStatus('sending');
     try {
       let SubmitText = "<Tasks>\n";
       for (let i = 0; i < topics.length; i++) {
@@ -170,9 +202,9 @@ export default function Home() {
       SubmitText += "\n\n<Summary>\n・" + summary.toString();
       sendMessageToSlack(SubmitText);
 
-      // Clear the form fields by setting topics and summary to their initial empty values
-      setTopics([]);
-      setSummary("");
+      if (isSent) {
+        return <h1>Thanks for feedback!</h1>
+      }
 
     } catch (error) {
       console.error('Error:', error);
