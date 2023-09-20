@@ -1,35 +1,43 @@
-"use client"
-import React, { useState, useEffect } from 'react';
-import 'bootstrap/dist/css/bootstrap.min.css';
-import axios from 'axios'; // Import the axios library
-import { Container, Form, Button, Card, Col, Row, Alert } from 'react-bootstrap';
+"use client";
+import React, { useState, useEffect } from "react";
+import "bootstrap/dist/css/bootstrap.min.css";
+import axios from "axios"; // Import the axios library
+import {
+  Container,
+  Form,
+  Button,
+  Card,
+  Col,
+  Row,
+  Alert,
+} from "react-bootstrap";
 
 export default function Home() {
   const [topics, setTopics] = useState([
     {
       id: 1,
-      label: "",
+      label: "1",
       url: "",
       childIds: [2],
     },
     {
       id: 2,
-      label: "",
+      label: "2",
       url: "",
       childIds: null,
     },
-    // {
-    //   id: 3,
-    //   label: "",
-    //   url: "",
-    //   childIds: [4],
-    // },
-    // {
-    //   id: 4,
-    //   label: "",
-    //   url: "",
-    //   childIds: [],
-    // },
+    {
+      id: 3,
+      label: "3",
+      url: "",
+      childIds: [4],
+    },
+    {
+      id: 4,
+      label: "4",
+      url: "",
+      childIds: null,
+    },
   ]);
   // empty => throw red alert, suceed => green alert
   const [showAlert, setShowAlert] = useState(false);
@@ -39,18 +47,18 @@ export default function Home() {
   const [summary, setSummary] = useState("");
   function renderTopic(topic) {
     return (
-      <Card key={topic.id} style={{ width: '30' }} className="mt-3">
+      <Card key={topic.id} style={{ width: "30" }} className="mt-3">
         <Card.Body>
           <Button
             variant="outline-danger"
             onClick={() => removeTopic(topic.id)}
             className="position-absolute btn-sm top-0 end-0 mt-2 me-2"
           >
-            X
+            X {topic.id}
           </Button>
           Topic:
           <Form.Group as={Row} className="mb-3 mt-4">
-            <Form.Label style={{ textAlign: 'right' }} column sm="2">
+            <Form.Label style={{ textAlign: "right" }} column sm="2">
               Label:
             </Form.Label>
             <Col sm="10">
@@ -59,12 +67,12 @@ export default function Home() {
                 placeholder="Enter label:"
                 value={topic.label}
                 onChange={(e) => handleLabelChange(e, topic.id)}
-                style={{ textAlign: 'left' }}
+                style={{ textAlign: "left" }}
               />
             </Col>
           </Form.Group>
           <Form.Group as={Row} className="mb-3">
-            <Form.Label style={{ textAlign: 'right' }} column sm="2">
+            <Form.Label style={{ textAlign: "right" }} column sm="2">
               URL:
             </Form.Label>
             <Col sm="10">
@@ -79,18 +87,22 @@ export default function Home() {
           <div>
             {/* {topic.childIds.length < 6  && ( */}
             <>
-              {topic.childIds && topic.childIds.map((childId) => {
-                const childTopic = topics.find((t) => t.id === childId);
-                if (childTopic) {
-                  return renderTopic(childTopic);
-                }
-                return null; // Child topic doesn't exist, so don't render it
-              })}
+              {topic.childIds &&
+                topic.childIds.map((childId) => {
+                  const childTopic = topics.find((t) => t.id === childId);
+                  if (childTopic) {
+                    return renderTopic(childTopic);
+                  }
+                  return null; // Child topic doesn't exist, so don't render it
+                })}
               <div className="text-end mt-2">
                 {topic.childIds !== null && (
-                <Button onClick={() => handleAddChildButton(topic.id)} style={{ align: 'right' }}>
-                  Add Child {topic.id}
-                </Button>
+                  <Button
+                    onClick={() => handleAddChildButton(topic.id)}
+                    style={{ align: "right" }}
+                  >
+                    Add Child {topic.id}
+                  </Button>
                 )}
               </div>
             </>
@@ -102,36 +114,43 @@ export default function Home() {
   }
   async function sendMessageToSlack(messageText) {
     try {
-      const response = await axios.post( // Use axios for the HTTP request
-        '/api/hello',
+      const response = await axios.post(
+        // Use axios for the HTTP request
+        "/api/hello",
         {
-          channel: '#development',
+          channel: "#development",
           text: messageText,
         }
       );
       // Handle the response as needed
     } catch (error) {
-      console.error('Error sending message to Slack:', error);
+      console.error("Error sending message to Slack:", error);
     }
   }
   function removeTopic(idToRemove) {
-    const updatedTopics = [];
+    console.log("idToRemove");
+    console.log(idToRemove);
+    const targetTopic = topics.find((t) => t.id === idToRemove);
+    const isTargetTopicChild = targetTopic.childIds === null;
 
-    // Define a recursive function to remove children
-    function removeTopicRecursive(topicId) {
-      const topicToRemove = topics.find((topic) => topic.id === topicId);
-      if (topicToRemove) {
-        updatedTopics.push(topicToRemove);
-        topicToRemove.childIds.forEach((childId) => {
-          removeTopicRecursive(childId);
-        });
-      }
-    }
+    const updatedTopics = isTargetTopicChild
+      ? topics
+          .filter((t) => t.id !== idToRemove)
+          .map((t) => {
+            return {
+              ...t,
+              childIds:
+                t.childIds !== null
+                  ? t.childIds.filter((id) => id !== idToRemove)
+                  : null,
+            };
+          })
+      : topics
+          .filter((t) => ![...targetTopic.childIds, idToRemove].includes(t.id));
 
-    // Start the recursive removal process with the parent topic
-    removeTopicRecursive(idToRemove);
-
-    setTopics((prevTopics) => prevTopics.filter((topic) => !updatedTopics.includes(topic)));
+    console.log("updatedTopics");
+    console.log(updatedTopics);
+    setTopics(updatedTopics);
   }
 
   const handleURLChange = (e, topicId) => {
@@ -162,32 +181,35 @@ export default function Home() {
   };
 
   const handleAddChildButton = (parentId) => {
+    const newTopicId = Math.max(...topics.map(t => t.id)) + 1;
+
     const newTopic = {
-      id: topics.length + 1,
-      label: "new child topic test",//TODO: empty it
+      id: newTopicId,
+      label: "new child topic test", //TODO: empty it
       url: "",
       childIds: null,
     };
     console.log(newTopic);
 
-    const targetParentTopic = topics.find((topic) => topic.id == parentId)
+    const targetParentTopic = topics.find((topic) => topic.id == parentId);
     // const updatedParentTopic = targetParentTopic.childIds.push(newTopic.id);
-    const updatedParentTopic = { ...targetParentTopic, childIds: [...targetParentTopic.childIds, newTopic.id] };
+    const updatedParentTopic = {
+      ...targetParentTopic,
+      childIds: [...targetParentTopic.childIds, newTopicId],
+    };
     console.log(updatedParentTopic);
     console.log(topics);
     // const copiedTopics = topics.concat();
     const copiedTopics = [...topics];
     console.log("copiedTopics 1");
     console.log(copiedTopics);
-    copiedTopics[targetParentTopic.id - 1] = updatedParentTopic;
+    
+    const targetParentTopicIndex = copiedTopics.findIndex((topic) => topic.id == parentId);
+    copiedTopics[targetParentTopicIndex] = updatedParentTopic;
     console.log("copiedTopics 2");
     console.log(copiedTopics);
 
-    const updatedTopics = [
-      ...copiedTopics,
-      newTopic,
-
-    ]
+    const updatedTopics = [...copiedTopics, newTopic];
     console.log(updatedTopics);
     setTopics(updatedTopics);
     // const updatedTopics = topics.map((topic) => {
@@ -201,34 +223,29 @@ export default function Home() {
     // });
 
     // setTopics([...updatedTopics, newTopic]);
-
-  }
+  };
 
   const handleAddTopicButton = () => {
+    const newTopicId = Math.max(...topics.map(t => t.id)) + 1;
     const newTopic = {
-      id: topics.length + 1,
-      label: "new topic test",//TODO: empty it
+      id: newTopicId,
+      label: "new topic test", //TODO: empty it
       url: "",
       childIds: [],
     };
     console.log(topics);
-    const updatedTopics = [
-      ...topics,
-      newTopic
-    ];
+    const updatedTopics = [...topics, newTopic];
     console.log(updatedTopics);
     setTopics(updatedTopics);
-
   };
-
-
-
 
   function handleSubmit(e) {
     e.preventDefault();
     // Check if any of the input fields are empty
-    const isEmpty = topics.some((topic) => topic.label === '' || topic.url === '');
-    if (isEmpty || summary === '') {
+    const isEmpty = topics.some(
+      (topic) => topic.label === "" || topic.url === ""
+    );
+    if (isEmpty || summary === "") {
       // Show the Bootstrap alert
       setShowAlert(true);
     } else {
@@ -237,21 +254,31 @@ export default function Home() {
         let SubmitText = "<Tasks>\n";
         let arr = [];
 
-
         for (let i = 0; i < topics.length; i++) {
           if (!arr.includes(topics[i].id)) {
-            SubmitText += "・" + topics[i].label.toString() + "(" + topics[i].url.toString() + " )\n";
+            SubmitText +=
+              "・" +
+              topics[i].label.toString() +
+              "(" +
+              topics[i].url.toString() +
+              " )\n";
             arr.push(topics[i].id);
           }
 
           if (topics[i].childIds.length > 0) {
             for (let j = 0; j < topics[i].childIds.length; j++) {
-              const childTopic = topics.find((t) => t.id === topics[i].childIds[j]);
+              const childTopic = topics.find(
+                (t) => t.id === topics[i].childIds[j]
+              );
               if (!arr.includes(childTopic.id)) {
-                SubmitText += "    ・" + childTopic.label.toString() + "(" + childTopic.url.toString() + " )\n";
+                SubmitText +=
+                  "    ・" +
+                  childTopic.label.toString() +
+                  "(" +
+                  childTopic.url.toString() +
+                  " )\n";
                 arr.push(childTopic.id);
               }
-
             }
           }
         }
@@ -260,25 +287,30 @@ export default function Home() {
         console.log(SubmitText);
 
         sendMessageToSlack(SubmitText);
-
       } catch (error) {
-        console.error('Error:', error);
+        console.error("Error:", error);
       }
     }
-
   }
 
   return (
     <Container className="mt-4">
       <Form onSubmit={handleSubmit}>
-        {topics.filter((topic) => !topics.some((t) => t.childIds && t.childIds.includes(topic.id))).map((topic) => (
-          renderTopic(topic)
-        ))}
+        {topics
+          .filter(
+            (topic) =>
+              !topics.some((t) => t.childIds && t.childIds.includes(topic.id))
+          )
+          .map((topic) => renderTopic(topic))}
         <div className="d-flex justify-content-between mt-3">
           <Button variant="primary" className="mx-5">
             Summarized by AI
           </Button>
-          <Button variant="primary" onClick={() => handleAddTopicButton(null)} className="mx-5">
+          <Button
+            variant="primary"
+            onClick={handleAddTopicButton}
+            className="mx-5"
+          >
             Add Topic
           </Button>
         </div>
@@ -287,7 +319,7 @@ export default function Home() {
             onChange={(e) => setSummary(e.target.value)}
             className="form-control mt-3"
             id="floatingTextarea2"
-            style={{ height: '100px' }}
+            style={{ height: "100px" }}
           ></textarea>
           <label htmlFor="floatingTextarea2">Summary</label>
         </div>
