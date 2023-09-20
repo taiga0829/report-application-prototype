@@ -14,22 +14,29 @@ export default function Home() {
     },
     {
       id: 2,
+      label: "child topic ID 2",
+      url: "",
+      childIds: null,
+    },
+    {
+      id: 3,
+      label: "",
+      url: "",
+      childIds: [4],
+    },
+    {
+      id: 4,
+      label: "",
+      url: "",
+      childIds: null,
+    },
+    {
+      id: 5,
       label: "",
       url: "",
       childIds: [],
     },
-    // {
-    //   id: 3,
-    //   label: "",
-    //   url: "",
-    //   childIds: [4],
-    // },
-    // {
-    //   id: 4,
-    //   label: "",
-    //   url: "",
-    //   childIds: [],
-    // },
+
   ]);
   // empty => throw red alert, suceed => green alert
   const [showAlert, setShowAlert] = useState(false);
@@ -38,12 +45,14 @@ export default function Home() {
   // }, []);
   const [summary, setSummary] = useState("");
   function renderTopic(topic) {
+    console.log("Render topic");
+    console.log(topic);
     return (
       <Card key={topic.id} style={{ width: '30' }} className="mt-3">
         <Card.Body>
           <Button
             variant="outline-danger"
-            onClick={() => removeTopic(topic.id)}
+            onClick={() => handleRemoveButton(topic.id)}
             className="position-absolute btn-sm top-0 end-0 mt-2 me-2"
           >
             X
@@ -79,22 +88,22 @@ export default function Home() {
           <div>
             {/* {topic.childIds.length < 6  && ( */}
             <>
-              {topic.childIds.map((childId) => {
-                const childTopic = topics.find((t) => t.id === childId);
-                if (childTopic) {
-                  return renderTopic(childTopic);
-                }
-                return null; // Child topic doesn't exist, so don't render it
-              })}
+              {topic.childIds === null ? []
+                : topic.childIds.map((childId) => {
+                  const childTopic = topics.find((t) => t.id === childId);
+                  if (childTopic) {
+                    return renderTopic(childTopic);
+                  }
+                  return null; // Child topic doesn't exist, so don't render it
+                })}
               <div className="text-end mt-2">
-                {/* {topic.childIds.length > 0 && ( */}
-                <Button onClick={() => handleAddChildButton(topic.id)} style={{ align: 'right' }}>
-                  Add Child
-                </Button>
-                {/* )} */}
+                {topic.childIds !== null &&
+                  <Button onClick={() => handleAddChildButton(topic.id)} style={{ align: 'right' }}>
+                    Add Child {topic.id}
+                  </Button>
+                }
               </div>
             </>
-            {/* )} */}
           </div>
         </Card.Body>
       </Card>
@@ -114,25 +123,30 @@ export default function Home() {
       console.error('Error sending message to Slack:', error);
     }
   }
-  function removeTopic(idToRemove) {
-    const updatedTopics = [];
-
-    // Define a recursive function to remove children
-    function removeTopicRecursive(topicId) {
-      const topicToRemove = topics.find((topic) => topic.id === topicId);
-      if (topicToRemove) {
-        updatedTopics.push(topicToRemove);
-        topicToRemove.childIds.forEach((childId) => {
-          removeTopicRecursive(childId);
-        });
-      }
+  const handleRemoveButton = (topicId) => {
+    //TODO: in case that topicId belongs to child ,search the id in childIds which parent has, 
+    //delete proper id in childIds, and delete object having topicId  
+    // while this, simply delete children which parent has, then delete parent
+    const targetTopic = topics.find((topic) => topic.id === topicId);
+    if (targetTopic.childIds === null) {
+      //child
+      const targetChildID = targetTopic.id;
+      //search for same id as targetChildId in parent's childId array and removed id from parent's child array
+      const TopicsWithoutChildId = topics.map((topic) => {
+        topic.childIds = topic.childIds.filter(childId => childId !== targetChildID);
+      })
+      // delete child with topicID
+      const updatedTopics = TopicsWithoutChildId.filter((topic) => topic.id !== targetChildID);
+      setTopics(updatedTopics);
     }
-
-    // Start the recursive removal process with the parent topic
-    removeTopicRecursive(idToRemove);
-
-    setTopics((prevTopics) => prevTopics.filter((topic) => !updatedTopics.includes(topic)));
+    else {
+      //parent
+      // remove parent with topic id
+      const updatedTopics = topics.filter((topic) => topic.id !== topicId);
+      setTopics(updatedTopics);
+    }
   }
+
 
   const handleURLChange = (e, topicId) => {
     const updatedTopics = topics.map((topic) => {
@@ -162,19 +176,24 @@ export default function Home() {
   };
 
   const handleAddChildButton = (parentId) => {
+    console.log("topics");
+    console.log(topics);
     const newTopic = {
       id: topics.length + 1,
       label: "new child topic test",//TODO: empty it
       url: "",
-      childIds: [],
+      childIds: null,
     };
     console.log(newTopic);
-
+    console.log("parent id");
+    console.log(parentId);
     const targetParentTopic = topics.find((topic) => topic.id == parentId)
+    console.log("targetParentTopic");
+    console.log(targetParentTopic);
     // const updatedParentTopic = targetParentTopic.childIds.push(newTopic.id);
     const updatedParentTopic = { ...targetParentTopic, childIds: [...targetParentTopic.childIds, newTopic.id] };
     console.log(updatedParentTopic);
-    console.log(topics);
+
     // const copiedTopics = topics.concat();
     const copiedTopics = [...topics];
     console.log("copiedTopics 1");
@@ -271,7 +290,7 @@ export default function Home() {
   return (
     <Container className="mt-4">
       <Form onSubmit={handleSubmit}>
-        {topics.filter((topic) => !topics.some((t) => t.childIds.includes(topic.id))).map((topic) => (
+        {topics.filter((topic) => topic.childIds !== null).map((topic) => (
           renderTopic(topic)
         ))}
         <div className="d-flex justify-content-between mt-3">
