@@ -5,37 +5,37 @@ import axios from 'axios'; // Import the axios library
 import { Container, Form, Button, Card, Col, Row, Alert } from 'react-bootstrap';
 
 export default function Home() {
-  const [topics, setTopics] = useState([]);
+  const [topics, setTopics] = useState([
+    {
+      id: 1,
+      label: "",
+      url: "",
+      childIds: [2],
+    },
+    {
+      id: 2,
+      label: "",
+      url: "",
+      childIds: [],
+    },
+    // {
+    //   id: 3,
+    //   label: "",
+    //   url: "",
+    //   childIds: [4],
+    // },
+    // {
+    //   id: 4,
+    //   label: "",
+    //   url: "",
+    //   childIds: [],
+    // },
+  ]);
   // empty => throw red alert, suceed => green alert
   const [showAlert, setShowAlert] = useState(false);
-  useEffect(() => {
-    setTopics([
-      {
-        id: 1,
-        label: "",
-        url: "",
-        childIds: [2],
-      },
-      {
-        id: 2,
-        label: "",
-        url: "",
-        childIds: [],
-      },
-      {
-        id: 3,
-        label: "",
-        url: "",
-        childIds: [4],
-      },
-      {
-        id: 4,
-        label: "",
-        url: "",
-        childIds: [],
-      },
-    ]);
-  }, []);
+  // useEffect(() => {
+  //   setTopics([);
+  // }, []);
   const [summary, setSummary] = useState("");
   function renderTopic(topic) {
     return (
@@ -77,26 +77,25 @@ export default function Home() {
             </Col>
           </Form.Group>
           <div>
-            {topic.childIds.length > 0 && (
-              <>
-                {topic.childIds.map((childId) => {
-                  const childTopic = topics.find((t) => t.id === childId);
-                  if (childTopic) {
-                    return renderTopic(childTopic);
-                  }
-                  return null; // Child topic doesn't exist, so don't render it
-                })}
-                <div className="text-end mt-2">
-                  {topic.childIds.length > 0 && (
-                    <Button onClick={() => addTopic(topic.id)} style={{ align: 'right' }}>
-                      Add Child
-                    </Button>
-                  )}
-                </div>
-              </>
-            )}
+            {/* {topic.childIds.length < 6  && ( */}
+            <>
+              {topic.childIds.map((childId) => {
+                const childTopic = topics.find((t) => t.id === childId);
+                if (childTopic) {
+                  return renderTopic(childTopic);
+                }
+                return null; // Child topic doesn't exist, so don't render it
+              })}
+              <div className="text-end mt-2">
+                {/* {topic.childIds.length > 0 && ( */}
+                <Button onClick={() => handleAddChildButton(topic.id)} style={{ align: 'right' }}>
+                  Add Child
+                </Button>
+                {/* )} */}
+              </div>
+            </>
+            {/* )} */}
           </div>
-
         </Card.Body>
       </Card>
     );
@@ -104,7 +103,6 @@ export default function Home() {
   async function sendMessageToSlack(messageText) {
     try {
       const response = await axios.post( // Use axios for the HTTP request
-        'https://slack.com/api/chat.postMessage',
         '/api/hello',
         {
           channel: '#development',
@@ -163,26 +161,68 @@ export default function Home() {
     setTopics(updatedTopics);
   };
 
-  const addTopic = (parentId) => {
+  const handleAddChildButton = (parentId) => {
     const newTopic = {
       id: topics.length + 1,
-      label: "",
+      label: "new child topic test",//TODO: empty it
       url: "",
       childIds: [],
     };
+    console.log(newTopic);
 
-    const updatedTopics = topics.map((topic) => {
-      if (topic.id === parentId) {
-        return {
-          ...topic,
-          childIds: [...topic.childIds, newTopic.id],
-        };
-      }
-      return topic;
-    });
+    const targetParentTopic = topics.find((topic) => topic.id == parentId)
+    // const updatedParentTopic = targetParentTopic.childIds.push(newTopic.id);
+    const updatedParentTopic = { ...targetParentTopic, childIds: [...targetParentTopic.childIds, newTopic.id] };
+    console.log(updatedParentTopic);
+    console.log(topics);
+    // const copiedTopics = topics.concat();
+    const copiedTopics = [...topics];
+    console.log("copiedTopics 1");
+    console.log(copiedTopics);
+    copiedTopics[targetParentTopic.id - 1] = updatedParentTopic;
+    console.log("copiedTopics 2");
+    console.log(copiedTopics);
 
-    setTopics([...updatedTopics, newTopic]);
+    const updatedTopics = [
+      ...copiedTopics,
+      newTopic,
+
+    ]
+    console.log(updatedTopics);
+    setTopics(updatedTopics);
+    // const updatedTopics = topics.map((topic) => {
+    //   if (topic.id === parentId) {
+    //     return {
+
+    //       childIds: [...topic.childIds, newTopic.id],
+    //     };
+    //   }
+    //   return topic;
+    // });
+
+    // setTopics([...updatedTopics, newTopic]);
+
+  }
+
+  const handleAddTopicButton = () => {
+    const newTopic = {
+      id: topics.length + 1,
+      label: "new topic test",//TODO: empty it
+      url: "",
+      childIds: [],
+    };
+    console.log(topics);
+    const updatedTopics = [
+      ...topics,
+      newTopic
+    ];
+    console.log(updatedTopics);
+    setTopics(updatedTopics);
+
   };
+
+
+
 
   function handleSubmit(e) {
     e.preventDefault();
@@ -238,8 +278,8 @@ export default function Home() {
           <Button variant="primary" className="mx-5">
             Summarized by AI
           </Button>
-          <Button variant="primary" onClick={() => addTopic(null)} className="mx-5">
-            Add
+          <Button variant="primary" onClick={() => handleAddTopicButton(null)} className="mx-5">
+            Add Topic
           </Button>
         </div>
         <div className="form-floating">
