@@ -16,7 +16,7 @@ export default function Home() {
       id: 2,
       label: "",
       url: "",
-      childIds: [],
+      childIds: null,
     },
     // {
     //   id: 3,
@@ -79,7 +79,7 @@ export default function Home() {
           <div>
             {/* {topic.childIds.length < 6  && ( */}
             <>
-              {topic.childIds.map((childId) => {
+              {topic.childIds && topic.childIds.map((childId) => {
                 const childTopic = topics.find((t) => t.id === childId);
                 if (childTopic) {
                   return renderTopic(childTopic);
@@ -87,11 +87,11 @@ export default function Home() {
                 return null; // Child topic doesn't exist, so don't render it
               })}
               <div className="text-end mt-2">
-                {/* {topic.childIds.length > 0 && ( */}
+                {topic.childIds !== null && (
                 <Button onClick={() => handleAddChildButton(topic.id)} style={{ align: 'right' }}>
-                  Add Child
+                  Add Child {topic.id}
                 </Button>
-                {/* )} */}
+                )}
               </div>
             </>
             {/* )} */}
@@ -166,7 +166,7 @@ export default function Home() {
       id: topics.length + 1,
       label: "new child topic test",//TODO: empty it
       url: "",
-      childIds: [],
+      childIds: null,
     };
     console.log(newTopic);
 
@@ -271,7 +271,7 @@ export default function Home() {
   return (
     <Container className="mt-4">
       <Form onSubmit={handleSubmit}>
-        {topics.filter((topic) => !topics.some((t) => t.childIds.includes(topic.id))).map((topic) => (
+        {topics.filter((topic) => !topics.some((t) => t.childIds && t.childIds.includes(topic.id))).map((topic) => (
           renderTopic(topic)
         ))}
         <div className="d-flex justify-content-between mt-3">
