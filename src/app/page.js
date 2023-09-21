@@ -13,11 +13,7 @@ export default function Home() {
       childIds: [],
     },
   ]);
-  // empty => throw red alert, suceed => green alert
   const [showAlert, setShowAlert] = useState(false);
-  // useEffect(() => {
-  //   setTopics([);
-  // }, []);
   const [summary, setSummary] = useState("");
   function renderTopic(topic) {
     return (
@@ -59,7 +55,6 @@ export default function Home() {
             </Col>
           </Form.Group>
           <div>
-            {/* {topic.childIds.length < 6  && ( */}
             <>
               {topic.childIds === null ? []
                 : topic.childIds.map((childId) => {
@@ -67,7 +62,8 @@ export default function Home() {
                   if (childTopic) {
                     return renderTopic(childTopic);
                   }
-                  return null; // Child topic doesn't exist, so don't render it
+                  // Child topic doesn't exist, so don't render it
+                  return null;
                 })}
               <div className="text-end mt-2">
                 {topic.childIds !== null &&
@@ -83,22 +79,16 @@ export default function Home() {
     );
   }
   async function sendMessageToSlack(messageText) {
-    try {
-      const response = await axios.post( // Use axios for the HTTP request
-        '/api/hello',
-        {
-          channel: '#development',
-          text: messageText,
-        }
-      );
-      // Handle the response as needed
-    } catch (error) {
-      console.error('Error sending message to Slack:', error);
-    }
+
+    const response = await axios.post(
+      '/api/request',
+      {
+        channel: '#development',
+        text: messageText,
+      }
+    );
   }
   const handleRemoveButton = (topicId) => {
-    console.log("idToRemove");
-    console.log(topicId);
     const targetTopic = topics.find((t) => t.id === topicId);
     const isTargetTopicChild = targetTopic.childIds === null;
 
@@ -120,9 +110,6 @@ export default function Home() {
       //child:[1,2,3,4] parent:5 => [1,2,3,4,5] => delete [1,2,3,4,5]
       // delete parent which has topicId and its children which parent has
       : topics.filter((t) => ![...targetTopic.childIds, topicId].includes(t.id));
-
-    console.log("updatedTopics");
-    console.log(updatedTopics);
     setTopics(updatedTopics);
   }
 
@@ -157,71 +144,40 @@ export default function Home() {
   };
 
   const handleAddChildButton = (parentId) => {
-    console.log("topics");
-    console.log(topics);
     const topicIds = topics.map(topic => topic.id);
-    console.log("topicids");
-    console.log(topicIds);
-
     const newTopic = {
       id: Math.max(...topicIds) + 1,
-      label: "new child topic test",//TODO: empty it
+      label: "",
       url: "",
       childIds: null,
     };
-    console.log(newTopic);
-    console.log("parent id");
-    console.log(parentId);
-    const targetParentTopic = topics.find((topic) => topic.id == parentId)
-    console.log("targetParentTopic");
-    console.log(targetParentTopic);
+    const targetParentTopic = topics.find((topic) => topic.id == parentId);
     // const updatedParentTopic = targetParentTopic.childIds.push(newTopic.id);
     const updatedParentTopic = { ...targetParentTopic, childIds: [...targetParentTopic.childIds, newTopic.id] };
-    console.log(updatedParentTopic);
-
     // const copiedTopics = topics.concat();
     const copiedTopics = [...topics];
-    console.log("copiedTopics 1");
-    console.log(copiedTopics);
     copiedTopics[targetParentTopic.id - 1] = updatedParentTopic;
-    console.log("copiedTopics 2");
-    console.log(copiedTopics);
 
     const updatedTopics = [
       ...copiedTopics,
       newTopic,
 
     ]
-    console.log(updatedTopics);
     setTopics(updatedTopics);
-    // const updatedTopics = topics.map((topic) => {
-    //   if (topic.id === parentId) {
-    //     return {
-
-    //       childIds: [...topic.childIds, newTopic.id],
-    //     };
-    //   }
-    //   return topic;
-    // });
-
-    // setTopics([...updatedTopics, newTopic]);
-
   }
 
   const handleAddTopicButton = () => {
     const topicIds = topics.map((topic) => topic.id);
     const newTopic = {
       id: Math.max(...topicIds) + 1,
-      label: "",//TODO: empty it
+      label: "",
       url: "",
       childIds: [],
     };
-    console.log(topics);
     const updatedTopics = [
       ...topics,
       newTopic
     ];
-    console.log(updatedTopics);
     setTopics(updatedTopics);
 
   };
@@ -248,7 +204,6 @@ export default function Home() {
           })
         })
       SubmitText += "\n\n<Summary>\n・" + summary.toString();
-      console.log(SubmitText);
       sendMessageToSlack(SubmitText);
     }
   }
