@@ -1,6 +1,4 @@
 import axios from "axios";
-// Put private Token to here
-const SLACK_API_TOKEN = "xoxb-5626190471478-5852348483253-cr5G3AeZcHaVrgIj4J7t9PLC";
 
 export default async function handler(req, res) {
     try {
@@ -12,11 +10,11 @@ export default async function handler(req, res) {
             },
             {
                 headers: {
-                    Authorization: 'Bearer ' + SLACK_API_TOKEN,
+                    Authorization: 'Bearer ' + process.env.SLACKAPI_TOKEN,
                 },
             }
         );
-        console.log(slackAPIResponse);
+        console.log(process.env.DB_HOST);
         if (slackAPIResponse.status === 200) {
             res.status(200).send();
         } else {
