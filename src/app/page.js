@@ -1,113 +1,240 @@
-import Image from 'next/image'
+"use client"
+import React, { useState, useEffect } from 'react';
+import 'bootstrap/dist/css/bootstrap.min.css';
+import axios from 'axios'; // Import the axios library
+import { Container, Form, Button, Card, Col, Row, Alert } from 'react-bootstrap';
 
 export default function Home() {
-  return (
-    <main className="flex min-h-screen flex-col items-center justify-between p-24">
-      <div className="z-10 max-w-5xl w-full items-center justify-between font-mono text-sm lg:flex">
-        <p className="fixed left-0 top-0 flex w-full justify-center border-b border-gray-300 bg-gradient-to-b from-zinc-200 pb-6 pt-8 backdrop-blur-2xl dark:border-neutral-800 dark:bg-zinc-800/30 dark:from-inherit lg:static lg:w-auto  lg:rounded-xl lg:border lg:bg-gray-200 lg:p-4 lg:dark:bg-zinc-800/30">
-          Get started by editing&nbsp;
-          <code className="font-mono font-bold">src/app/page.js</code>
-        </p>
-        <div className="fixed bottom-0 left-0 flex h-48 w-full items-end justify-center bg-gradient-to-t from-white via-white dark:from-black dark:via-black lg:static lg:h-auto lg:w-auto lg:bg-none">
-          <a
-            className="pointer-events-none flex place-items-center gap-2 p-8 lg:pointer-events-auto lg:p-0"
-            href="https://vercel.com?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+  const [topics, setTopics] = useState([
+    {
+      id: 1,
+      label: "",
+      url: "",
+      childIds: [],
+    },
+  ]);
+  const [showAlert, setShowAlert] = useState(false);
+  const [summary, setSummary] = useState("");
+  function renderTopic(topic) {
+    return (
+      <Card key={topic.id} style={{ width: '30' }} className="mt-3">
+        <Card.Body>
+          <Button
+            variant="outline-danger"
+            onClick={() => handleRemoveButton(topic.id)}
+            className="position-absolute btn-sm top-0 end-0 mt-2 me-2"
           >
-            By{' '}
-            <Image
-              src="/vercel.svg"
-              alt="Vercel Logo"
-              className="dark:invert"
-              width={100}
-              height={24}
-              priority
-            />
-          </a>
+            X
+          </Button>
+          Topic:
+          <Form.Group as={Row} className="mb-3 mt-4">
+            <Form.Label style={{ textAlign: 'right' }} column sm="2">
+              Label:
+            </Form.Label>
+            <Col sm="10">
+              <Form.Control
+                type="text"
+                placeholder="Enter label:"
+                value={topic.label}
+                onChange={(e) => handleLabelChange(e, topic.id)}
+                style={{ textAlign: 'left' }}
+              />
+            </Col>
+          </Form.Group>
+          <Form.Group as={Row} className="mb-3">
+            <Form.Label style={{ textAlign: 'right' }} column sm="2">
+              URL:
+            </Form.Label>
+            <Col sm="10">
+              <Form.Control
+                type="text"
+                placeholder="Enter URL:"
+                onChange={(e) => handleURLChange(e, topic.id)}
+                value={topic.url}
+              />
+            </Col>
+          </Form.Group>
+          <div>
+            <>
+              {topic.childIds === null ? []
+                : topic.childIds.map((childId) => {
+                  const childTopic = topics.find((t) => t.id === childId);
+                  if (childTopic) {
+                    return renderTopic(childTopic);
+                  }
+                  // Child topic doesn't exist, so don't render it
+                  return null;
+                })}
+              <div className="text-end mt-2">
+                {topic.childIds !== null &&
+                  <Button onClick={() => handleAddChildButton(topic.id)} style={{ align: 'right' }}>
+                    Add Child
+                  </Button>
+                }
+              </div>
+            </>
+          </div>
+        </Card.Body>
+      </Card>
+    );
+  }
+
+  async function sendMessageToSlack(messageText) {
+    const response = await axios.post(
+      '/api/request',
+      {
+        channel: '#development',
+        text: messageText,
+      }
+    );
+  }
+
+  const handleRemoveButton = (topicId) => {
+    const targetTopic = topics.find((t) => t.id === topicId);
+    const isTargetTopicChild = targetTopic.childIds === null;
+    const updatedTopics = isTargetTopicChild
+      ? topics
+        // extract topics other than topic with topicId
+        .filter((t) => t.id !== topicId)
+        // operation for parent
+        .map((t) => {
+          return {
+            ...t,
+            // if childIds includes topicId, remove it  
+            childIds:
+              t.childIds !== null
+                ? t.childIds.filter((id) => id !== topicId)
+                : null,
+          };
+        })
+      //child:[1,2,3,4] parent:5 => [1,2,3,4,5] => delete [1,2,3,4,5]
+      // delete parent which has topicId and its children which parent has
+      : topics.filter((t) => ![...targetTopic.childIds, topicId].includes(t.id));
+    setTopics(updatedTopics);
+  }
+
+  const handleURLChange = (e, topicId) => {
+    const updatedTopics = topics.map((topic) => {
+      if (topic.id === topicId) {
+        return {
+          ...topic,
+          url: e.target.value,
+        };
+      }
+      return topic;
+    });
+    setTopics(updatedTopics);
+  };
+
+  const handleLabelChange = (e, topicId) => {
+    const updatedTopics = topics.map((topic) => {
+      if (topic.id === topicId) {
+        return {
+          ...topic,
+          label: e.target.value,
+        };
+      }
+      return topic;
+    });
+
+    setTopics(updatedTopics);
+  };
+
+  const handleAddChildButton = (parentId) => {
+    const topicIds = topics.map(topic => topic.id);
+    const newTopic = {
+      id: Math.max(...topicIds) + 1,
+      label: "",
+      url: "",
+      childIds: null,
+    };
+    const targetParentTopic = topics.find((topic) => topic.id == parentId);
+    const updatedParentTopic = { ...targetParentTopic, childIds: [...targetParentTopic.childIds, newTopic.id] };
+    const copiedTopics = [...topics];
+    copiedTopics[targetParentTopic.id - 1] = updatedParentTopic;
+
+    const updatedTopics = [
+      ...copiedTopics,
+      newTopic,
+    ]
+    setTopics(updatedTopics);
+  }
+
+  const handleAddTopicButton = () => {
+    const topicIds = topics.map((topic) => topic.id);
+    const newTopic = {
+      id: Math.max(...topicIds) + 1,
+      label: "",
+      url: "",
+      childIds: [],
+    };
+    const updatedTopics = [
+      ...topics,
+      newTopic
+    ];
+    setTopics(updatedTopics);
+  };
+
+  function handleSubmit(e) {
+    e.preventDefault();
+    // Check if any of the input fields are empty
+    const isEmpty = topics.some((topic) => topic.label === '' || topic.url === '');
+    if (isEmpty || summary === '') {
+      // Show the Bootstrap alert
+      setShowAlert(true);
+    } else {
+      setShowAlert(false); // Hide the alert if the form is valid
+      let SubmitText = "<Tasks>\n";
+      topics
+        // extract ONLY parents
+        .filter((t) => t.childIds !== null)
+        // add parents and children beloging to parents as string to submitText
+        .forEach((topic) => {
+          SubmitText += "・" + topic.label + "(" + topic.url + " )\n";
+          topic.childIds.forEach((id) => {
+            const childTopic = topics.find((topic) => topic.id === id);
+            SubmitText += "   ・" + childTopic.label + "(" + childTopic.url + ")\n";
+          })
+        })
+      SubmitText += "\n\n<Summary>\n・" + summary.toString();
+      sendMessageToSlack(SubmitText);
+    }
+  }
+
+  return (
+    <Container className="mt-4">
+      <Form onSubmit={handleSubmit}>
+        {topics.filter((topic) => topic.childIds !== null).map((topic) => (
+          renderTopic(topic)
+        ))}
+        <div className="d-flex justify-content-between mt-3">
+          <Button variant="primary" className="mx-5">
+            Summarize
+          </Button>
+          <Button variant="primary" onClick={() => handleAddTopicButton(null)} className="mx-5">
+            Add Topic
+          </Button>
         </div>
-      </div>
-
-      <div className="relative flex place-items-center before:absolute before:h-[300px] before:w-[480px] before:-translate-x-1/2 before:rounded-full before:bg-gradient-radial before:from-white before:to-transparent before:blur-2xl before:content-[''] after:absolute after:-z-20 after:h-[180px] after:w-[240px] after:translate-x-1/3 after:bg-gradient-conic after:from-sky-200 after:via-blue-200 after:blur-2xl after:content-[''] before:dark:bg-gradient-to-br before:dark:from-transparent before:dark:to-blue-700 before:dark:opacity-10 after:dark:from-sky-900 after:dark:via-[#0141ff] after:dark:opacity-40 before:lg:h-[360px] z-[-1]">
-        <Image
-          className="relative dark:drop-shadow-[0_0_0.3rem_#ffffff70] dark:invert"
-          src="/next.svg"
-          alt="Next.js Logo"
-          width={180}
-          height={37}
-          priority
-        />
-      </div>
-
-      <div className="mb-32 grid text-center lg:max-w-5xl lg:w-full lg:mb-0 lg:grid-cols-4 lg:text-left">
-        <a
-          href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Docs{' '}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Find in-depth information about Next.js features and API.
-          </p>
-        </a>
-
-        <a
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800 hover:dark:bg-opacity-30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Learn{' '}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Learn about Next.js in an interactive course with&nbsp;quizzes!
-          </p>
-        </a>
-
-        <a
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Templates{' '}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Explore the Next.js 13 playground.
-          </p>
-        </a>
-
-        <a
-          href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Deploy{' '}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Instantly deploy your Next.js site to a shareable URL with Vercel.
-          </p>
-        </a>
-      </div>
-    </main>
-  )
+        <div className="form-floating">
+          <textarea
+            onChange={(e) => setSummary(e.target.value)}
+            className="form-control mt-3"
+            id="floatingTextarea2"
+            style={{ height: '100px' }}
+          ></textarea>
+          <label htmlFor="floatingTextarea2">Summary</label>
+        </div>
+        <div className="d-flex justify-content-between mt-3">
+          <Button variant="primary" type="submit" className="mx-5">
+            Submit
+          </Button>
+        </div>
+        {showAlert && (
+          <Alert variant="danger" className="mt-3">
+            Please fill in all the required fields.
+          </Alert>
+        )}
+      </Form>
+    </Container>
+  );
 }
