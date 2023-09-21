@@ -4,8 +4,7 @@ const SLACK_API_TOKEN = "xoxb-5626190471478-5852348483253-cr5G3AeZcHaVrgIj4J7t9P
 
 export default async function handler(req, res) {
     try {
-        
-        const response = await axios.post(
+        const slackAPIResponse = await axios.post(
             'https://slack.com/api/chat.postMessage',
             {
                 channel: req.body.channel,
@@ -17,7 +16,14 @@ export default async function handler(req, res) {
                 },
             }
         );
+        console.log(slackAPIResponse);
+        if (slackAPIResponse.status === 200) {
+            res.status(200).send();
+        } else {
+            res.status(500).send();
+        }
     } catch (error) {
+        res.status(500).send();
         console.error('Error sending message to Slack:', error);
         console.error('Error response data:', error.response.data);
         console.error('Error response status:', error.response.status);
