@@ -1,9 +1,28 @@
-This is a [Next.js](https://nextjs.org/) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+## 業務報告サポートアプリ
+このアプリは、ユーザーが業務内容を各トピックに分けて、階層的に入力し、Slackの特定のチャンネルに業務内容をポストするWebアプリケーションです。また、要約情報を入力も可能です。
 
-## Getting Started
+## 使用技術
+- React
+- Next.js
+- Bootstrap 
+- Axios
+- Slack API
 
-First, run the development server:
+## 機能
+### トピックの追加と編集
+"Add Topic"ボタンをクリックすると、新しいトピックが追加されます。  
+トピックのラベルとURLを入力して、トピック情報を編集できます。  
+"Add Child"ボタンを使用して、親トピックに子トピックを追加できます。  
 
+### トピックの削除
+"X"ボタンをクリックすると、トピックが削除されます。子トピックも同時に削除されます。     
+
+### AIによる一連のトピックの要約文の作成(開発中)
+フォームに要約情報を入力します。  
+すべてのトピックにラベルとURLが設定されており、要約情報も入力されている場合、データがSlackチャンネルに送信されます。
+
+## 使用方法
+このアプリを起動します。  
 ```bash
 npm run dev
 # or
@@ -11,24 +30,19 @@ yarn dev
 # or
 pnpm dev
 ```
+ブラウザで http://localhost:3000/ にアクセスします。  
+"Add Topic"ボタンをクリックして新しいトピックを追加します。  
+各トピックのラベルとURLを入力します。  
+必要に応じて子トピックを追加します。  
+要約情報を入力します。  
+"Submit"ボタンをクリックしてデータを送信します。  
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## 注意事項
+すべてのトピックにはラベルとURLが設定されている必要があります。入力されていない場合、フォームの送信が失敗します。  
+削除操作は階層全体に影響します。  
 
-You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
+## 開発者向け情報
+このアプリはReactを使用して開発されました。コードはコンポーネントベースで構成されており、簡単にカスタマイズできます。また、Slackにデータを送信するためにaxiosライブラリを使用しています。
 
-This project uses [`next/font`](https://nextjs.org/docs/basic-features/font-optimization) to automatically optimize and load Inter, a custom Google Font.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js/) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/deployment) for more details.
+## ライセンス  
+このアプリはMITライセンスの下で利用可能です。詳細については、LICENSEファイルを参照してください。
