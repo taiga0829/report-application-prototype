@@ -10,33 +10,8 @@ export default function Home() {
       id: 1,
       label: "",
       url: "",
-      childIds: [2],
-    },
-    {
-      id: 2,
-      label: "child topic ID 2",
-      url: "",
-      childIds: null,
-    },
-    {
-      id: 3,
-      label: "",
-      url: "",
-      childIds: [4],
-    },
-    {
-      id: 4,
-      label: "",
-      url: "",
-      childIds: null,
-    },
-    {
-      id: 5,
-      label: "",
-      url: "",
       childIds: [],
     },
-
   ]);
   // empty => throw red alert, suceed => green alert
   const [showAlert, setShowAlert] = useState(false);
@@ -45,8 +20,6 @@ export default function Home() {
   // }, []);
   const [summary, setSummary] = useState("");
   function renderTopic(topic) {
-    console.log("Render topic");
-    console.log(topic);
     return (
       <Card key={topic.id} style={{ width: '30' }} className="mt-3">
         <Card.Body>
@@ -99,7 +72,7 @@ export default function Home() {
               <div className="text-end mt-2">
                 {topic.childIds !== null &&
                   <Button onClick={() => handleAddChildButton(topic.id)} style={{ align: 'right' }}>
-                    Add Child {topic.id}
+                    Add Child
                   </Button>
                 }
               </div>
@@ -124,28 +97,36 @@ export default function Home() {
     }
   }
   const handleRemoveButton = (topicId) => {
-    //TODO: in case that topicId belongs to child ,search the id in childIds which parent has, 
-    //delete proper id in childIds, and delete object having topicId  
-    // while this, simply delete children which parent has, then delete parent
-    const targetTopic = topics.find((topic) => topic.id === topicId);
-    if (targetTopic.childIds === null) {
-      //child
-      const targetChildID = targetTopic.id;
-      //search for same id as targetChildId in parent's childId array and removed id from parent's child array
-      const TopicsWithoutChildId = topics.map((topic) => {
-        topic.childIds = topic.childIds.filter(childId => childId !== targetChildID);
-      })
-      // delete child with topicID
-      const updatedTopics = TopicsWithoutChildId.filter((topic) => topic.id !== targetChildID);
-      setTopics(updatedTopics);
-    }
-    else {
-      //parent
-      // remove parent with topic id
-      const updatedTopics = topics.filter((topic) => topic.id !== topicId);
-      setTopics(updatedTopics);
-    }
+    console.log("idToRemove");
+    console.log(topicId);
+    const targetTopic = topics.find((t) => t.id === topicId);
+    const isTargetTopicChild = targetTopic.childIds === null;
+
+    const updatedTopics = isTargetTopicChild
+      ? topics
+        // extract topics other than topic with topicId
+        .filter((t) => t.id !== topicId)
+        // operation for parent
+        .map((t) => {
+          return {
+            ...t,
+            // if childIds includes topicId, remove it  
+            childIds:
+              t.childIds !== null
+                ? t.childIds.filter((id) => id !== topicId)
+                : null,
+          };
+        })
+      //child:[1,2,3,4] parent:5 => [1,2,3,4,5] => delete [1,2,3,4,5]
+      // delete parent which has topicId and its children which parent has
+      : topics.filter((t) => ![...targetTopic.childIds, topicId].includes(t.id));
+
+    console.log("updatedTopics");
+    console.log(updatedTopics);
+    setTopics(updatedTopics);
   }
+
+
 
 
   const handleURLChange = (e, topicId) => {
@@ -178,8 +159,12 @@ export default function Home() {
   const handleAddChildButton = (parentId) => {
     console.log("topics");
     console.log(topics);
+    const topicIds = topics.map(topic => topic.id);
+    console.log("topicids");
+    console.log(topicIds);
+
     const newTopic = {
-      id: topics.length + 1,
+      id: Math.max(...topicIds) + 1,
       label: "new child topic test",//TODO: empty it
       url: "",
       childIds: null,
@@ -224,9 +209,10 @@ export default function Home() {
   }
 
   const handleAddTopicButton = () => {
+    const topicIds = topics.map((topic) => topic.id);
     const newTopic = {
-      id: topics.length + 1,
-      label: "new topic test",//TODO: empty it
+      id: Math.max(...topicIds) + 1,
+      label: "",//TODO: empty it
       url: "",
       childIds: [],
     };
@@ -240,9 +226,6 @@ export default function Home() {
 
   };
 
-
-
-
   function handleSubmit(e) {
     e.preventDefault();
     // Check if any of the input fields are empty
@@ -252,37 +235,31 @@ export default function Home() {
       setShowAlert(true);
     } else {
       setShowAlert(false); // Hide the alert if the form is valid
-      try {
-        let SubmitText = "<Tasks>\n";
-        let arr = [];
 
+      let SubmitText = "<Tasks>\n";
+      let idsWroteDown = [];
 
-        for (let i = 0; i < topics.length; i++) {
-          if (!arr.includes(topics[i].id)) {
-            SubmitText += "・" + topics[i].label.toString() + "(" + topics[i].url.toString() + " )\n";
-            arr.push(topics[i].id);
-          }
-
-          if (topics[i].childIds.length > 0) {
-            for (let j = 0; j < topics[i].childIds.length; j++) {
-              const childTopic = topics.find((t) => t.id === topics[i].childIds[j]);
-              if (!arr.includes(childTopic.id)) {
-                SubmitText += "    ・" + childTopic.label.toString() + "(" + childTopic.url.toString() + " )\n";
-                arr.push(childTopic.id);
-              }
-
-            }
-          }
+      topics.forEach((topic) => {
+        if (!idsWroteDown.includes(topic.id)) {
+          SubmitText += "・" + topic.label.toString() + "(" + topic.url.toString() + " )\n";
+          idsWroteDown.push(topic.id);
         }
+        if (topic.childIds !== null) {
+          topic.childIds.forEach((id) => {
+            const childTopic = topics.find((topic) => topic.id === id);
+            if (!idsWroteDown.includes(id)) {
+              SubmitText += "   ・" + childTopic.label.toString() + "(" + childTopic.url.toString() + ")\n";
+              idsWroteDown.push(id);
+            }
+          })
+        }
+      })
 
-        SubmitText += "\n\n<Summary>\n・" + summary.toString();
-        console.log(SubmitText);
+      SubmitText += "\n\n<Summary>\n・" + summary.toString();
+      console.log(SubmitText);
 
-        sendMessageToSlack(SubmitText);
+      sendMessageToSlack(SubmitText);
 
-      } catch (error) {
-        console.error('Error:', error);
-      }
     }
 
   }
