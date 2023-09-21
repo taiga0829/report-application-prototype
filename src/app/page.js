@@ -235,33 +235,22 @@ export default function Home() {
       setShowAlert(true);
     } else {
       setShowAlert(false); // Hide the alert if the form is valid
-
       let SubmitText = "<Tasks>\n";
-      let idsWroteDown = [];
-
-      topics.forEach((topic) => {
-        if (!idsWroteDown.includes(topic.id)) {
-          SubmitText += "・" + topic.label.toString() + "(" + topic.url.toString() + " )\n";
-          idsWroteDown.push(topic.id);
-        }
-        if (topic.childIds !== null) {
+      topics
+        // extract ONLY parents
+        .filter((t) => t.childIds !== null)
+        // add parents and children beloging to parents as string to submitText
+        .forEach((topic) => {
+          SubmitText += "・" + topic.label + "(" + topic.url + " )\n";
           topic.childIds.forEach((id) => {
             const childTopic = topics.find((topic) => topic.id === id);
-            if (!idsWroteDown.includes(id)) {
-              SubmitText += "   ・" + childTopic.label.toString() + "(" + childTopic.url.toString() + ")\n";
-              idsWroteDown.push(id);
-            }
+            SubmitText += "   ・" + childTopic.label + "(" + childTopic.url + ")\n";
           })
-        }
-      })
-
+        })
       SubmitText += "\n\n<Summary>\n・" + summary.toString();
       console.log(SubmitText);
-
       sendMessageToSlack(SubmitText);
-
     }
-
   }
 
   return (
