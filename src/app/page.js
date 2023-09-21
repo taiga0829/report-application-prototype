@@ -78,8 +78,8 @@ export default function Home() {
       </Card>
     );
   }
-  async function sendMessageToSlack(messageText) {
 
+  async function sendMessageToSlack(messageText) {
     const response = await axios.post(
       '/api/request',
       {
@@ -88,10 +88,10 @@ export default function Home() {
       }
     );
   }
+
   const handleRemoveButton = (topicId) => {
     const targetTopic = topics.find((t) => t.id === topicId);
     const isTargetTopicChild = targetTopic.childIds === null;
-
     const updatedTopics = isTargetTopicChild
       ? topics
         // extract topics other than topic with topicId
@@ -112,9 +112,6 @@ export default function Home() {
       : topics.filter((t) => ![...targetTopic.childIds, topicId].includes(t.id));
     setTopics(updatedTopics);
   }
-
-
-
 
   const handleURLChange = (e, topicId) => {
     const updatedTopics = topics.map((topic) => {
@@ -152,16 +149,13 @@ export default function Home() {
       childIds: null,
     };
     const targetParentTopic = topics.find((topic) => topic.id == parentId);
-    // const updatedParentTopic = targetParentTopic.childIds.push(newTopic.id);
     const updatedParentTopic = { ...targetParentTopic, childIds: [...targetParentTopic.childIds, newTopic.id] };
-    // const copiedTopics = topics.concat();
     const copiedTopics = [...topics];
     copiedTopics[targetParentTopic.id - 1] = updatedParentTopic;
 
     const updatedTopics = [
       ...copiedTopics,
       newTopic,
-
     ]
     setTopics(updatedTopics);
   }
@@ -179,7 +173,6 @@ export default function Home() {
       newTopic
     ];
     setTopics(updatedTopics);
-
   };
 
   function handleSubmit(e) {
@@ -216,7 +209,7 @@ export default function Home() {
         ))}
         <div className="d-flex justify-content-between mt-3">
           <Button variant="primary" className="mx-5">
-            Summarized by AI
+            Summarize
           </Button>
           <Button variant="primary" onClick={() => handleAddTopicButton(null)} className="mx-5">
             Add Topic
