@@ -22,12 +22,8 @@
 すべてのトピックにラベルとURLが設定されており、要約情報も入力されている場合、データがSlackチャンネルに送信されます。
 
 ## 使用方法
-予めSlack API Tokenを用意してください。  
-.env.localをプロジェクト直下に作成します。  
-SLACKAPI_TOKENというキー名でSlack API Tokenを入力して下さい。
-```
-SLACKAPI_TOKEN="" 
-```  
+slackAPIに関する情報を環境変数として格納する必要があります。
+ローカル環境で実行する場合は.env.local.exampleを参照し、.env.localを新たに作成して下さい。
 このアプリを起動します。  
 ```bash
 npm run dev
