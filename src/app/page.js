@@ -85,7 +85,6 @@ export default function Home() {
     const response = await axios.post(
       '/api/request',
       {
-        channel: '#development',
         text: messageText,
       }
     );
