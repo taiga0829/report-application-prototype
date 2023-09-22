@@ -14,7 +14,6 @@ export default async function handler(req, res) {
                 },
             }
         );
-        console.log(process.env.DB_HOST);
         if (slackAPIResponse.status === 200) {
             res.status(200).send();
         } else {
