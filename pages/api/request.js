@@ -5,7 +5,7 @@ export default async function handler(req, res) {
         const slackAPIResponse = await axios.post(
             'https://slack.com/api/chat.postMessage',
             {
-                channel: req.body.channel,
+                channel: "#" + process.env.SLACK_CAHNNEL_NAME,
                 text: req.body.text,
             },
             {
