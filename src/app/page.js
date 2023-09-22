@@ -7,9 +7,11 @@ import { Container, Form, Button, Card, Col, Row, Alert } from 'react-bootstrap'
 export default function Home() {
   const [topics, setTopics] = useState([
     {
+      // id is started from 1
       id: 1,
       label: "",
       url: "",
+      //if topics have null in childId, the topis will be child. Conversely,in case topics have have array in childId, they will be child.
       childIds: [],
     },
   ]);
