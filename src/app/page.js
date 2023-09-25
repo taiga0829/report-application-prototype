@@ -1,10 +1,13 @@
 "use client"
-import React, { useState, useEffect } from 'react';
 import 'bootstrap/dist/css/bootstrap.min.css';
+import React, { useState } from 'react';
 import axios from 'axios'; // Import the axios library
-import { Container, Form, Button, Card, Col, Row, Alert } from 'react-bootstrap';
+import { Form, Button, Card, Col, Row, Container } from 'react-bootstrap';
+import TopicCard from './topicCard';
 
-export default function Home() {
+
+
+export default function Page() {
   const [topics, setTopics] = useState([
     {
       // id is started from 1
@@ -17,69 +20,6 @@ export default function Home() {
   ]);
   const [showAlert, setShowAlert] = useState(false);
   const [summary, setSummary] = useState("");
-  function renderTopic(topic) {
-    return (
-      <Card key={topic.id} style={{ width: '30' }} className="mt-3">
-        <Card.Body>
-          <Button
-            variant="outline-danger"
-            onClick={() => handleRemoveButton(topic.id)}
-            className="position-absolute btn-sm top-0 end-0 mt-2 me-2"
-          >
-            X
-          </Button>
-          Topic:
-          <Form.Group as={Row} className="mb-3 mt-4">
-            <Form.Label style={{ textAlign: 'right' }} column sm="2">
-              Label:
-            </Form.Label>
-            <Col sm="10">
-              <Form.Control
-                type="text"
-                placeholder="Enter label:"
-                value={topic.label}
-                onChange={(e) => handleLabelChange(e, topic.id)}
-                style={{ textAlign: 'left' }}
-              />
-            </Col>
-          </Form.Group>
-          <Form.Group as={Row} className="mb-3">
-            <Form.Label style={{ textAlign: 'right' }} column sm="2">
-              URL:
-            </Form.Label>
-            <Col sm="10">
-              <Form.Control
-                type="text"
-                placeholder="Enter URL:"
-                onChange={(e) => handleURLChange(e, topic.id)}
-                value={topic.url}
-              />
-            </Col>
-          </Form.Group>
-          <div>
-            <>
-              {topic.childIds === null ? []
-                : topic.childIds.map((childId) => {
-                  const childTopic = topics.find((t) => t.id === childId);
-                  if (childTopic) {
-                    return renderTopic(childTopic);
-                  }
-                  // Child topic doesn't exist, so don't render it
-                  return null;
-                })}
-              <div className="text-end mt-2">
-                {topic.childIds !== null &&
-                  <Button onClick={() => handleAddChildButton(topic.id)} style={{ align: 'right' }}>
-                    Add Child
-                  </Button>
-                }
-              </div>
-            </>
-          </div>
-        </Card.Body>
-      </Card>
-    );
-  }
 
   async function sendMessageToSlack(messageText) {
     const response = await axios.post(
@@ -201,12 +141,18 @@ export default function Home() {
       sendMessageToSlack(SubmitText);
     }
   }
-
   return (
     <Container className="mt-4">
       <Form onSubmit={handleSubmit}>
         {topics.filter((topic) => topic.childIds !== null).map((topic) => (
-          renderTopic(topic)
+          <TopicCard key={topic.id}
+            topic={topic}
+            handleRemoveButton={handleRemoveButton}
+            handleLabelChange={handleLabelChange}
+            handleURLChange={handleURLChange}
+            handleAddChildButton={handleAddChildButton}
+            topics={topics}>
+          </TopicCard>
         ))}
         <div className="d-flex justify-content-between mt-3">
           <Button variant="primary" className="mx-5">
