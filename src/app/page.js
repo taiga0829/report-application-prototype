@@ -21,15 +21,6 @@ export default function Page() {
   const [showAlert, setShowAlert] = useState(false);
   const [summary, setSummary] = useState("");
 
-  async function sendMessageToSlack(messageText) {
-    const response = await axios.post(
-      '/api/request',
-      {
-        text: messageText,
-      }
-    );
-  }
-
   const handleRemoveButton = (topicId) => {
     const targetTopic = topics.find((t) => t.id === topicId);
     const isTargetTopicChild = targetTopic.childIds === null;
@@ -116,30 +107,15 @@ export default function Page() {
     setTopics(updatedTopics);
   };
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault();
-    // Check if any of the input fields are empty
-    const isEmpty = topics.some((topic) => topic.label === '' || topic.url === '');
-    if (isEmpty || summary === '') {
-      // Show the Bootstrap alert
-      setShowAlert(true);
-    } else {
-      setShowAlert(false); // Hide the alert if the form is valid
-      let SubmitText = "<Tasks>\n";
-      topics
-        // extract ONLY parents
-        .filter((t) => t.childIds !== null)
-        // add parents and children beloging to parents as string to submitText
-        .forEach((topic) => {
-          SubmitText += "・" + topic.label + "(" + topic.url + " )\n";
-          topic.childIds.forEach((id) => {
-            const childTopic = topics.find((topic) => topic.id === id);
-            SubmitText += "   ・" + childTopic.label + "(" + childTopic.url + ")\n";
-          })
-        })
-      SubmitText += "\n\n<Summary>\n・" + summary.toString();
-      sendMessageToSlack(SubmitText);
-    }
+    const response = await axios.post(
+      '/api/request',
+      {
+        topics,
+        summary
+      }
+    );
   }
   return (
     <Container className="mt-4">
@@ -183,5 +159,5 @@ export default function Page() {
         )}
       </Form>
     </Container>
-  );
+  )
 }
