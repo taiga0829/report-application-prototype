@@ -1,0 +1,7 @@
+-   repo: local
+    hooks:
+    -   id: detect-local-changes
+        name: Detect Local Changes
+        entry: python3 main.py
+        language: python
+        stages: [commit]
