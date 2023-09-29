@@ -1,27 +1,27 @@
-import subprocess
-import time
+import os
+from git import Repo
 
-def check_condition_of_end_of_working():
-    pass
+def detect_local_changes(repo_path):
+    try:
+        repo = Repo(repo_path)
+        untracked_files = repo.untracked_files
+        diff = repo.head.commit.diff(None)
+        
+        if untracked_files or diff:
+            print("Local changes detected:")
+            if untracked_files:
+                print("Untracked Files:")
+                for file in untracked_files:
+                    print(f"  {file}")
+            if diff:
+                print("Modified Files:")
+                for change in diff.iter_change_type('M'):
+                    print(f"  {change.a_path}")
+        else:
+            print("No local changes detected.")
+    except Exception as e:
+        print(f"Error: {e}")
 
-def detect_local_changes():
-    # run the "git diff --exit-code" to check for local changes in a Git repository
-    # return a non-zero exit status if there are differences (i.e., local changes)
-    # 0 means that local changes are not detected
-    if subprocess.run(['git', 'diff', '--exit-code'], check=True).returncode == 0:
-        print("Local changes not detected")
-    else:
-        # timer start
-        print("Local changes are detected. Start timer")
-        start_time = time.time()
-        # timer end
-        if (check_condition_of_end_of_working()):
-            end_time = time.time()
-            working_time = end_time - start_time
-            print("This guy worked for " + str(working_time) + " seconds")
-          
-while True:
-    detect_local_changes()  # Call your function
-    time.sleep(600)  # Sleep for 10 minutes (600 seconds)
-
-#print(subprocess.run(['git', 'diff', '--exit-code'], check=True))
+if __name__ == "__main__":
+    repository_path = "/Users/taiga829/src/github/taiga0829/report-application-prototype_20230919/report-application-prototype"
+    detect_local_changes(repository_path)
