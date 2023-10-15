@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import axios from 'axios'; // Import the axios library
 import { Form, Button, Card, Col, Row, Container } from 'react-bootstrap';
 import TopicCard from './topicCard';
-
+import ExportExcelButton from './ExportExcelButton';
 
 
 export default function Page() {
@@ -119,6 +119,7 @@ export default function Page() {
   }
   return (
     <Container className="mt-4">
+      <ExportExcelButton></ExportExcelButton>
       <Form onSubmit={handleSubmit}>
         {topics.filter((topic) => topic.childIds !== null).map((topic) => (
           <TopicCard key={topic.id}

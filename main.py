@@ -11,23 +11,19 @@ def detect_local_changes(repo_path):
 
         # Get a list of untracked files in the repository
         untracked_files = repo.untracked_files
-        
+
         # Get the difference between the current commit and its parent (head.commit.diff(None))
         diff = repo.head.commit.diff(None)
 
         # Check if there are any untracked files or modified files
         if untracked_files or diff:
             print("Local changes detected:")
-            # send http request to react js app to start timer
-
-            #TODO: replace real API endpoint of react app
-            url = 'http://react_timer_api'  
-            # Data to send in the POST reques
+            
+            # Send an HTTP POST request to the Next.js API route
+            url = 'http://localhost:3000/api/exportExcel'  # Update with the correct API route URL
             data = {'message': 'user starts working'}
-            # Send the POST request
             response = requests.post(url, json=data)
 
-            # Check the response
             if response.status_code == 200:
                 print('POST request sent successfully')
             else:
@@ -47,15 +43,14 @@ def detect_local_changes(repo_path):
         else:
             print("No local changes detected.")
     except Exception as e:
-        # Handle exceptions, if any, and print an error message
         print(f"Error: {e}")
 
 if __name__ == "__main__":
     # Define the path to the Git repository
     repository_path = "/Users/taiga829/src/github/taiga0829/report-application-prototype_20230919/report-application-prototype"
 
-while True:
+    while True:
         detect_local_changes(repository_path)
-        #execute this function per 10 mins
-        time.sleep(600)
+        time.sleep(600)  # Execute this function every 10 minutes
+
 

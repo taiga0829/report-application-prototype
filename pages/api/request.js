@@ -1,55 +1,77 @@
-import axios from "axios";
+import axios from 'axios';
+import fetch from 'node-fetch';
 
 export default async function handler(req, res) {
-    try {
-        //req.body.topics will be assigned to the topics variable, and req.body.summary will be assigned to the summary variable.
-        const { topics, summary } = req.body; 
+  try {
+    if (req.method === 'POST') {
+      // Handle the POST request
+      const { topics, summary } = req.body;
 
-        // Check if any of the input fields are empty
-        const isEmpty = topics.some((topic) => topic.label === "" || topic.url === "");
-        if (isEmpty || summary === "") {
-            //400 means that the request sent to the server is invalid or corrupted
-            return res.status(400).json({ error: "Please fill in all the required fields." });
+      // Check if any of the input fields are empty
+      const isEmpty = topics.some((topic) => topic.label === '' || topic.url === '');
+      if (isEmpty || summary === '') {
+        return res.status(400).json({ error: 'Please fill in all the required fields.' });
+      }
+
+      let SubmitText = '<Tasks>\n';
+      topics
+        .filter((t) => t.childIds !== null)
+        .forEach((topic) => {
+          SubmitText += '・' + topic.label + '(' + topic.url + ' )\n';
+          topic.childIds.forEach((id) => {
+            const childTopic = topics.find((topic) => topic.id === id);
+            SubmitText += '     ・' + childTopic.label + '(' + childTopic.url + ')\n';
+          });
+        });
+
+      SubmitText += '\n\n<Summary>\n・' + summary;
+
+      const slackAPIResponse = await axios.post(
+        'https://slack.com/api/chat.postMessage',
+        {
+          channel: process.env.SLACK_CHANNEL_NAME,
+          text: SubmitText,
+        },
+        {
+          headers: {
+            Authorization: 'Bearer ' + process.env.SLACKAPI_TOKEN,
+          },
         }
+      );
 
-        let SubmitText = "<Tasks>\n";
-        topics
-            // extract ONLY parents
-            .filter((t) => t.childIds !== null)
-            // add parents and children belonging to parents as string to SubmitText
-            .forEach((topic) => {
-                SubmitText += "・" + topic.label + "(" + topic.url + " )\n";
-                topic.childIds.forEach((id) => {
-                    const childTopic = topics.find((topic) => topic.id === id);
-                    SubmitText += "     ・" + childTopic.label + "(" + childTopic.url + ")\n";
-                });
-            });
+      if (slackAPIResponse.status === 200) {
+        // if request is sent to slack, create end of working
+        const end_of_working = new Date();
 
-        SubmitText += "\n\n<Summary>\n・" + summary;
+        return res.status(200).send('Message sent to Slack successfully.');
+      } else {
+        return res.status(500).send('Failed to send message to Slack.');
+      }
+    } else if (req.method === 'GET') {
+      // Handle the GET request
+      const userId = 'U05Q6P7BYBV';
+      const myHeaders = new Headers();
+      myHeaders.append(
+        'Authorization',
+        'Bearer xoxp-5626190471478-5822789406403-5852348460501-69cbae98ee7fc3400c4ff33e66ab5154'
+      );
+      const requestOptions = {
+        method: 'GET',
+        headers: myHeaders,
+        redirect: 'follow',
+      };
 
-        const slackAPIResponse = await axios.post(
-            "https://slack.com/api/chat.postMessage",
-            {
-                channel: process.env.SLACK_CHANNEL_NAME,
-                text: SubmitText, // Use the generated text
-            },
-            {
-                headers: {
-                    Authorization: "Bearer " + process.env.SLACKAPI_TOKEN,
-                },
-            }
-        );
+      const response = await fetch(`https://slack.com/api/users.getPresence?user=${userId}`, requestOptions);
+      const data = await response.json(); // Assuming the response is JSON
+      console.log(data.online);
 
-        if (slackAPIResponse.status === 200) {
-            return res.status(200).send("Message sent to Slack successfully.");
-        } else {
-            return res.status(500).send("Failed to send message to Slack.");
-        }
-    } catch (error) {
-        console.log(error);
-        console.error("Error sending message to Slack:", error);
-        console.error("Error response data:", error.response ? error.response.data : "N/A");
-        console.error("Error response status:", error.response ? error.response.status : "N/A");
-        return res.status(500).send("Internal server error.");
+      res.status(200).json(data);
+    } else {
+      res.status(405).json({ error: 'Method Not Allowed' });
     }
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
 }
+
