@@ -14,11 +14,12 @@ if [ $# -ne 1 ]; then
     exit 1
 fi
 # Find Python files that import GitPython and store the result in a variable
-path_to_git_Bshell_files="$1"
+path_to_Bshell_file="$(pwd)" + "/Bshell.sh"
 
 # Define the content for the cron job
 #TODO: put another scripts 
-cron_job="@reboot $path_to_git_Bshell_files "
+
+cron_job="@reboot ${path_to_Bshell_file}"
 
 # Add the cron job to the user's crontab
 echo "$cron_job" | crontab -

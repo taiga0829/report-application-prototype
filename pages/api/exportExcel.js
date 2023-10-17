@@ -7,6 +7,8 @@ export default async (req, res) => {
       const requestData = req.body;
       // Create a new Excel workbook
       const workbook = new Workbook();
+      console.log(req.body);
+      
       
 
       // Add a worksheet to the workbook

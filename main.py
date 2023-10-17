@@ -3,6 +3,7 @@ from git import Repo
 import time
 import requests
 
+
 # Function to detect local changes in a Git repository
 def detect_local_changes(repo_path):
     try:
@@ -18,32 +19,38 @@ def detect_local_changes(repo_path):
         # Check if there are any untracked files or modified files
         if untracked_files or diff:
             print("Local changes detected:")
-            
+
             # Send an HTTP POST request to the Next.js API route
-            url = 'http://localhost:3000/api/exportExcel'  # Update with the correct API route URL
-            data = {'message': 'user starts working'}
+            url = "http://localhost:4000/api/exportExcel"  # Update with the correct API route URL
+            data = {"message": "user starts working"}
             response = requests.post(url, json=data)
 
             if response.status_code == 200:
-                print('POST request sent successfully')
+                print("POST request sent successfully")
             else:
-                print('Failed to send POST request')
+                print("Failed to send POST request")
 
             # If there are untracked files, print them
             if untracked_files:
                 print("Untracked Files:")
                 for file in untracked_files:
-                    print(f"  {file}")
+                    print(f"{file}")
 
             # If there are modified files, print them
             if diff:
                 print("Modified Files:")
-                for change in diff.iter_change_type('M'):
-                    print(f"  {change.a_path}")
+                for change in diff.iter_change_type("M"):
+                    print(f"{change.a_path}")
         else:
             print("No local changes detected.")
-    except Exception as e:
-        print(f"Error: {e}")
+    except requests.exceptions.ConnectionError as e:
+        print(f"Error:{e}")
+    # except RuntimeError as e:
+    #     print(f"the port can be wrong that sent request:(")
+    # except ConnectionRefusedError as e:
+    #     print(f"Error: {e}")
+    # except urllib3.exceptions.MaxRetryError as e:
+
 
 if __name__ == "__main__":
     # Define the path to the Git repository
@@ -52,5 +59,3 @@ if __name__ == "__main__":
     while True:
         detect_local_changes(repository_path)
         time.sleep(600)  # Execute this function every 10 minutes
-
-

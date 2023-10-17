@@ -42,7 +42,7 @@ export default async function handler(req, res) {
       if (slackAPIResponse.status === 200) {
         // if request is sent to slack, create end of working
         const end_of_working = new Date();
-
+        
         return res.status(200).send('Message sent to Slack successfully.');
       } else {
         return res.status(500).send('Failed to send message to Slack.');
