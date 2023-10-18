@@ -5,6 +5,7 @@ import axios from 'axios'; // Import the axios library
 import { Form, Button, Card, Col, Row, Container,Alert } from 'react-bootstrap';
 import TopicCard from './topicCard';
 import ExportExcelButton from './ExportExcelButton';
+import spreadSheet from '../../pages/api/spreadSheet';
 
 
 export default function Page() {
@@ -119,6 +120,7 @@ export default function Page() {
   }
   return (
     <Container className="mt-4">
+      <spreadSheet></spreadSheet>
       <ExportExcelButton></ExportExcelButton>
       <Form onSubmit={handleSubmit}>
         {topics.filter((topic) => topic.childIds !== null).map((topic) => (
