@@ -1,49 +1,44 @@
 import { google } from 'googleapis';
 
-export default function spreadSheet() {
-  // Initialize the OAuth2 client
-  const auth = new google.auth.OAuth2(process.env.CLIENT_ID, process.env.CLIENT_SECRET, process.env.REDIRECT_URL);
+export default async function handler(req, res) {
+  if (req.method === 'POST') {
+    const { request, name } = req.body;
 
-  // Use the authentication token to access the Google Sheets API
-  const sheets = google.sheets({ version: 'v4', auth });
-  sheets.spreadsheets.values.get({
-    spreadsheetId:process.env.SPREADSHEET_ID,
-    range: 'A1:B2',
-  })
-  .then((response) => {
-    const values = response.data.values;
-    if (values.length) {
-      console.log('Data:');
-      values.forEach((row) => {
-        console.log(`${row[0]}, ${row[1]}`);
+    const auth = new google.auth.GoogleAuth({
+      keyFile: 'credentials.json',
+      scopes: 'https://www.googleapis.com/auth/spreadsheets',
+    });
+
+    // Create client instance for auth
+    const client = await auth.getClient();
+
+    // Instance of Google Sheets API
+    const googleSheets = google.sheets({ version: 'v4', auth: client });
+
+    const spreadsheetId = process.env.SPREADSHEET_ID;
+
+    try {
+      // Write row(s) to spreadsheet
+      await googleSheets.spreadsheets.values.append({
+        auth,
+        spreadsheetId,
+        range: 'Sheet1!A:B',
+        valueInputOption: 'USER_ENTERED',
+        resource: {
+          values: [[request, name]],
+        },
       });
-    } else {
-      console.log('No data found.');
-    }
-  })
-  .catch((err) => {
-    console.error('The API returned an error:', err);
-  });
 
-  return (
-        <div>
-          <h1>Google Sheets Data</h1>
-          <table>
-            <thead>
-              <tr>
-                <th>Column 1</th>
-                <th>Column 2</th>
-              </tr>
-            </thead>
-            <tbody>
-              {sheetData.map((row, index) => (
-                <tr key={index}>
-                  <td>{row[0]}</td>
-                  <td>{row[1]}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )
-              }
+      res.status(200).json({ message: 'Successfully submitted! Thank you!' });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: 'Failed to submit data' });
+    }
+  } else {
+    res.status(405).end(); // Method Not Allowed
+  }
+}
+
+
+
+
