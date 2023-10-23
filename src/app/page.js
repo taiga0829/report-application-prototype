@@ -2,11 +2,9 @@
 import 'bootstrap/dist/css/bootstrap.min.css';
 import React, { useState } from 'react';
 import axios from 'axios'; // Import the axios library
-import { Form, Button, Card, Col, Row, Container,Alert } from 'react-bootstrap';
+import { Form, Button, Container, Alert } from 'react-bootstrap';
 import TopicCard from './topicCard';
 import ExportExcelButton from './ExportExcelButton';
-
-
 
 export default function Page() {
   const [topics, setTopics] = useState([
@@ -21,6 +19,7 @@ export default function Page() {
   ]);
   const [showAlert, setShowAlert] = useState(false);
   const [summary, setSummary] = useState("");
+  const [isRunning, setIsRunning] = useState(true);
 
   const handleRemoveButton = (topicId) => {
     const targetTopic = topics.find((t) => t.id === topicId);
@@ -108,6 +107,29 @@ export default function Page() {
     setTopics(updatedTopics);
   };
 
+  async function handleToggleRun (e) {
+    setIsRunning(!isRunning);
+    e.preventDefault();
+    if (!isRunning) {
+      try {
+        const response = await axios.post('/api/spreadSheet', {
+          message: 'Restart',
+        });
+      } catch (error) {
+        console.error(error);
+      }
+    } else {
+      try {
+        const response = await axios.post('/api/spreadSheet', {
+          message: 'Stop',
+        });
+  
+      } catch (error) {
+        console.error(error);
+      }
+    }
+  }
+
   async function handleSubmit(e) {
     e.preventDefault();
     const response = await axios.post(
@@ -116,7 +138,14 @@ export default function Page() {
         topics,
         summary
       }
+      
     );
+    const response2 = await axios.post(
+      'api/spreadSheet',
+      {
+        message:"Finish"
+      }
+    )
   }
   return (
     <Container className="mt-4">
@@ -135,6 +164,9 @@ export default function Page() {
         <div className="d-flex justify-content-between mt-3">
           <Button variant="primary" className="mx-5">
             Summarize
+          </Button>
+          <Button onClick={handleToggleRun} variant={isRunning ? "danger" : "primary"}>
+            {isRunning ? "Stop" : "Restart"}
           </Button>
           <Button variant="primary" onClick={() => handleAddTopicButton(null)} className="mx-5">
             Add Topic

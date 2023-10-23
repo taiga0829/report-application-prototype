@@ -17,14 +17,8 @@ export default async function handler(req, res) {
   if (req.method === 'POST') {
     // Handle the POST request to write data to the spreadsheet
     const { request, name } = req.body;
-
-    // Extract the month and day components
-    const originalDate = new Date().toISOString();
-    const month = (originalDate.getUTCMonth() + 1).toString().padStart(2, '0'); // Months are 0-based
-    const day = originalDate.getUTCDate().toString().padStart(2, '0');
-    // Create the formatted string
-    const formattedDate = `${month}-${day}`;
-
+    const messageAttribute = req.body.message;
+    console.log(messageAttribute);
     try {
       // Write row(s) to the spreadsheet
       const result = await googleSheets.spreadsheets.values.append({
@@ -34,8 +28,7 @@ export default async function handler(req, res) {
         valueInputOption: 'RAW',
         resource: {
           values: [
-            [new Date().toISOString(), "Some value", "Another value"],
-            [new Date().toISOString(), "Some value", "Another value"]
+            [new Date().toString(), messageAttribute],
           ],
         },
       });

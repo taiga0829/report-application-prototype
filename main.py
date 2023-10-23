@@ -21,8 +21,8 @@ def detect_local_changes(repo_path):
             print("Local changes detected:")
 
             # Send an HTTP POST request to the Next.js API route
-            url = "http://localhost:4000/api/exportExcel"  # Update with the correct API route URL
-            data = {"message": "user starts working"}
+            url = "http://localhost:4000/api/spreadSheet"  # Update with the correct API route URL
+            data = data = {"message": "Start"}
             response = requests.post(url, json=data)
 
             if response.status_code == 200:
