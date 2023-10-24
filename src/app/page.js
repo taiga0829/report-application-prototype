@@ -1,6 +1,6 @@
 "use client"
 import 'bootstrap/dist/css/bootstrap.min.css';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios'; // Import the axios library
 import { Form, Button, Container, Alert } from 'react-bootstrap';
 import TopicCard from './topicCard';
@@ -20,6 +20,18 @@ export default function Page() {
   const [showAlert, setShowAlert] = useState(false);
   const [summary, setSummary] = useState("");
   const [isRunning, setIsRunning] = useState(true);
+  const [userCurrentStatus, setUserCurrentStatus] = useState("");
+
+  useEffect(() => {
+    getCurrentStatus()
+      .then((status) => {
+        setUserCurrentStatus(status);
+        console.log("userCurrentStatus in useEffect:", status);
+      })
+      .catch((error) => {
+        console.error('Error:', error);
+      });
+  }, []);
 
   const handleRemoveButton = (topicId) => {
     const targetTopic = topics.find((t) => t.id === topicId);
@@ -107,12 +119,13 @@ export default function Page() {
     setTopics(updatedTopics);
   };
 
-  async function handleToggleRun (e) {
+  async function handleToggleRun(e) {
     setIsRunning(!isRunning);
     e.preventDefault();
+    console.log("userCurrentStatus in handleToggleRun:", userCurrentStatus);
     if (!isRunning) {
       try {
-        const response = await axios.post('/api/spreadSheet', {
+        const response = await axios.post('/api/workingStatus', {
           message: 'Restart',
         });
       } catch (error) {
@@ -120,15 +133,42 @@ export default function Page() {
       }
     } else {
       try {
-        const response = await axios.post('/api/spreadSheet', {
+        const response = await axios.post('/api/workingStatus', {
           message: 'Stop',
         });
-  
+
       } catch (error) {
         console.error(error);
       }
     }
   }
+
+  async function getCurrentStatus() {
+    const response = await axios.get('/api/workingStatus');
+    const userData = response.data.data; // Assuming your data is in the 'data' property
+
+    if (userData.length > 0) {
+      const userCurrentStatus = userData[userData.length - 1][1];
+      return userCurrentStatus;
+    } else {
+      // Handle the case where the array is empty
+      return null; // or any other appropriate value
+    }
+  }
+
+  // Example usage:
+  getCurrentStatus()
+    .then((status) => {
+      if (status === 'Stop') {
+        console.log('The user\'s current status is Stop.');
+      } else {
+        console.log('The user\'s current status is not Stop.');
+      }
+    })
+    .catch((error) => {
+      console.error('Error:', error);
+    });
+
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -138,12 +178,12 @@ export default function Page() {
         topics,
         summary
       }
-      
+
     );
     const response2 = await axios.post(
-      'api/spreadSheet',
+      'api/workingStatus',
       {
-        message:"Finish"
+        message: "Finish"
       }
     )
   }
@@ -165,9 +205,14 @@ export default function Page() {
           <Button variant="primary" className="mx-5">
             Summarize
           </Button>
-          <Button onClick={handleToggleRun} variant={isRunning ? "danger" : "primary"}>
-            {isRunning ? "Stop" : "Restart"}
+          <Button
+            onClick={handleToggleRun}
+            variant={isRunning ? "danger" : "primary"}
+            disabled={userCurrentStatus === "Finish"}
+          >
+            {isRunning ? "Stop" : userCurrentStatus === "Stop" ? "Restart" : "Stop"}
           </Button>
+
           <Button variant="primary" onClick={() => handleAddTopicButton(null)} className="mx-5">
             Add Topic
           </Button>
@@ -193,5 +238,6 @@ export default function Page() {
         )}
       </Form>
     </Container>
-  )
+  );
 }
+

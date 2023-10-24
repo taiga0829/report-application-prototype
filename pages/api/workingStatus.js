@@ -28,7 +28,7 @@ export default async function handler(req, res) {
         valueInputOption: 'RAW',
         resource: {
           values: [
-            [new Date().toString(), messageAttribute],
+            [new Date().toISOString(), messageAttribute],
           ],
         },
       });
@@ -68,9 +68,5 @@ export default async function handler(req, res) {
     res.status(405).end(); // Method Not Allowed
   }
 }
-
-
-
-
 
 
