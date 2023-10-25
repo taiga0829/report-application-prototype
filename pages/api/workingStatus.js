@@ -42,7 +42,8 @@ export default async function handler(req, res) {
     }
   } else if (req.method === 'GET') {
     // Handle the GET request to retrieve data from the spreadsheet
-    let range = "sheet1!A:C";
+    const sheetName = 'sheet1'; // Replace 'YourSheetName' with the actual name of the sheet
+    let range = `${sheetName}!A:C`; // Modify the range as needed
     try {
       // Use spreadsheets.get to retrieve spreadsheet data
       const response = await googleSheets.spreadsheets.values.get({

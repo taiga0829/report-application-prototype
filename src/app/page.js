@@ -23,6 +23,7 @@ export default function Page() {
   const [userCurrentStatus, setUserCurrentStatus] = useState("");
 
   useEffect(() => {
+    // Fetch user's status immediately when the component mounts
     getCurrentStatus()
       .then((status) => {
         setUserCurrentStatus(status);
@@ -31,7 +32,57 @@ export default function Page() {
       .catch((error) => {
         console.error('Error:', error);
       });
+
+    // Set up an interval to fetch user's status every 1 minute
+    const statusInterval = setInterval(() => {
+      getCurrentStatus()
+        .then((status) => {
+          setUserCurrentStatus(status);
+          console.log("userCurrentStatus in interval:", status);
+        })
+        .catch((error) => {
+          console.error('Error:', error);
+        });
+    }, 60000); // 1 minute in milliseconds
+
+    // Cleanup the interval when the component unmounts
+    return () => {
+      clearInterval(statusInterval);
+    };
   }, []);
+
+  // async function createNewSheet() {
+
+  //   try {
+  //     const response = await axios.post('/api/sheet', {
+  //       message: 'Restart',
+  //     });
+  //   } catch (error) {
+  //     console.error(error);
+  //   }
+  // }
+
+  // if the next day is next month create next sheet
+  // Function to check if the current date is the last day of the month
+  function isLastDayOfMonth(date) {
+    const nextDay = new Date(date);
+    nextDay.setDate(date.getDate() + 1);
+    return date.getMonth() !== nextDay.getMonth();
+  }
+
+  // Function to create a new sheet if today is the last day of the month
+  async function createNewSheetIfLastDayOfMonth() {
+    const today = new Date();
+
+    if (isLastDayOfMonth(today)) {
+      // Format the new sheet title with the next month and year (e.g., '11-2023')
+      const nextMonth = today.getMonth() === 11 ? 0 : today.getMonth() + 1;
+      const nextYear = today.getMonth() === 11 ? today.getFullYear() + 1 : today.getFullYear();
+      const sheetTitle = `${nextMonth + 1}-${nextYear}`;
+
+      await createNewSheet(sheetTitle);
+    }
+  }
 
   const handleRemoveButton = (topicId) => {
     const targetTopic = topics.find((t) => t.id === topicId);
@@ -122,7 +173,16 @@ export default function Page() {
   async function handleToggleRun(e) {
     setIsRunning(!isRunning);
     e.preventDefault();
-    console.log("userCurrentStatus in handleToggleRun:", userCurrentStatus);
+
+    getCurrentStatus()
+      .then((status) => {
+        setUserCurrentStatus(status);
+        console.log("userCurrentStatus in handleToggleRun:", status);
+      })
+      .catch((error) => {
+        console.error(error);
+      });
+
     if (!isRunning) {
       try {
         const response = await axios.post('/api/workingStatus', {
@@ -136,7 +196,6 @@ export default function Page() {
         const response = await axios.post('/api/workingStatus', {
           message: 'Stop',
         });
-
       } catch (error) {
         console.error(error);
       }
@@ -156,19 +215,28 @@ export default function Page() {
     }
   }
 
-  // Example usage:
-  getCurrentStatus()
-    .then((status) => {
-      if (status === 'Stop') {
-        console.log('The user\'s current status is Stop.');
-      } else {
-        console.log('The user\'s current status is not Stop.');
-      }
-    })
-    .catch((error) => {
-      console.error('Error:', error);
-    });
+  async function handleCreateNewSheet() {
+    try {
+      // Make an API request to the server-side endpoint to create a new sheet
+      const response = await axios.post('/api/createSheet', {
+        // Any necessary request data
+      });
+      console.log(response.data.message); // Handle the response as needed
+    } catch (error) {
+      console.error(error);
+    }
+  }
 
+  async function handleCreateNewFile() {
+    try {
+      // Make an API request to the server-side endpoint to create a new sheet
+      const response = await axios.post('/api/createFile', {
+      });
+      console.log(response.data.message); // Handle the response as needed
+    } catch (error) {
+      console.error(error);
+    }
+  }
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -207,12 +275,11 @@ export default function Page() {
           </Button>
           <Button
             onClick={handleToggleRun}
-            variant={isRunning ? "danger" : "primary"}
+            variant={userCurrentStatus === "Stop" ? "primary" : "danger"}
             disabled={userCurrentStatus === "Finish"}
           >
-            {isRunning ? "Stop" : userCurrentStatus === "Stop" ? "Restart" : "Stop"}
+            {userCurrentStatus == "Stop" ? "Restart" : "Stop"}
           </Button>
-
           <Button variant="primary" onClick={() => handleAddTopicButton(null)} className="mx-5">
             Add Topic
           </Button>
@@ -230,12 +297,13 @@ export default function Page() {
           <Button variant="primary" type="submit" className="mx-5">
             Submit
           </Button>
+          <Button variant="primary" onClick={handleCreateNewSheet}>
+            Create Sheet
+          </Button>
+          <Button variant="primary" onClick={handleCreateNewFile}>
+            Create file
+          </Button>
         </div>
-        {showAlert && (
-          <Alert variant="danger" className="mt-3">
-            Please fill in all the required fields.
-          </Alert>
-        )}
       </Form>
     </Container>
   );
