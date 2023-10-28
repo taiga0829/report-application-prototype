@@ -1,7 +1,7 @@
 "use client"
 import 'bootstrap/dist/css/bootstrap.min.css';
 import React, { useState, useEffect } from 'react';
-import axios from 'axios'; // Import the axios library
+import axios from 'axios';
 import { Form, Button, Container, Alert } from 'react-bootstrap';
 import TopicCard from './topicCard';
 import ExportExcelButton from './ExportExcelButton';
@@ -39,6 +39,12 @@ export default function Page() {
         .then((status) => {
           setUserCurrentStatus(status);
           console.log("userCurrentStatus in interval:", status);
+          //if status == stop && is_first_of_month then make summary sheet
+          const today = new Date();
+          const isFirstDayOfMonth = today.getDate() === 1;
+          if(status == "stop" && isFirstDayOfMonth){
+            createNewSheet();
+          }
         })
         .catch((error) => {
           console.error('Error:', error);
@@ -51,16 +57,16 @@ export default function Page() {
     };
   }, []);
 
-  // async function createNewSheet() {
 
-  //   try {
-  //     const response = await axios.post('/api/sheet', {
-  //       message: 'Restart',
-  //     });
-  //   } catch (error) {
-  //     console.error(error);
-  //   }
-  // }
+
+  async function createNewSheet() {
+
+    try {
+      const response = await axios.post('/api/createSheet');
+    } catch (error) {
+      console.error(error);
+    }
+  }
 
   // if the next day is next month create next sheet
   // Function to check if the current date is the last day of the month
@@ -135,6 +141,19 @@ export default function Page() {
     setTopics(updatedTopics);
   };
 
+  async function handleStartButton(e) {
+    // send POST to spreadsheet to input "Start"
+    try {
+      const response = await axios.post('/api/workingStatus', {
+        message: 'start',
+      });
+    } catch (error) {
+      console.error(error);
+    }
+    //set status "start"
+    setUserCurrentStatus("start");
+  }
+
   const handleAddChildButton = (parentId) => {
     const topicIds = topics.map(topic => topic.id);
     const newTopic = {
@@ -183,31 +202,25 @@ export default function Page() {
         console.error(error);
       });
 
-    if (!isRunning) {
-      try {
-        const response = await axios.post('/api/workingStatus', {
-          message: 'Restart',
-        });
-      } catch (error) {
-        console.error(error);
-      }
-    } else {
-      try {
-        const response = await axios.post('/api/workingStatus', {
-          message: 'Stop',
-        });
-      } catch (error) {
-        console.error(error);
-      }
+
+    try {
+      const response = await axios.post('/api/workingStatus', {
+        message: 'stop',
+      });
+    } catch (error) {
+      console.error(error);
     }
   }
+
 
   async function getCurrentStatus() {
     const response = await axios.get('/api/workingStatus');
     const userData = response.data.data; // Assuming your data is in the 'data' property
+    console.log(userData);
 
     if (userData.length > 0) {
       const userCurrentStatus = userData[userData.length - 1][1];
+      console.log(userCurrentStatus);
       return userCurrentStatus;
     } else {
       // Handle the case where the array is empty
@@ -257,6 +270,23 @@ export default function Page() {
   }
   return (
     <Container className="mt-4">
+      {userCurrentStatus === "local changes detected" && <Alert variant="primary">
+        <Alert.Heading>Detect local changes!!!</Alert.Heading>
+        <p>
+          The system detected local changes on which you are working on git repository.<br></br>
+          <strong>wanna start working?</strong>
+        </p>
+        <hr />
+        <div className="d-flex justify-content-end">
+          <Button variant="danger" onClick={() => setUserCurrentStatus("stop")} className="mr-5">
+            Close
+          </Button>
+          <Button variant="primary" onClick={handleStartButton}>
+            Start
+          </Button>
+        </div>
+      </Alert>
+      }
       <ExportExcelButton></ExportExcelButton>
       <Form onSubmit={handleSubmit}>
         {topics.filter((topic) => topic.childIds !== null).map((topic) => (
@@ -275,14 +305,15 @@ export default function Page() {
           </Button>
           <Button
             onClick={handleToggleRun}
-            variant={userCurrentStatus === "Stop" ? "primary" : "danger"}
-            disabled={userCurrentStatus === "Finish"}
+            variant={userCurrentStatus === "stop" ? "primary" : "danger"}
+            disabled={userCurrentStatus === "local changes detected"}
           >
-            {userCurrentStatus == "Stop" ? "Restart" : "Stop"}
+            {userCurrentStatus == "local changes detected" ? "Start" : "stop"}
           </Button>
           <Button variant="primary" onClick={() => handleAddTopicButton(null)} className="mx-5">
             Add Topic
           </Button>
+
         </div>
         <div className="form-floating">
           <textarea
@@ -297,11 +328,8 @@ export default function Page() {
           <Button variant="primary" type="submit" className="mx-5">
             Submit
           </Button>
-          <Button variant="primary" onClick={handleCreateNewSheet}>
-            Create Sheet
-          </Button>
-          <Button variant="primary" onClick={handleCreateNewFile}>
-            Create file
+          <Button variant="primary" onClick={handleCreateNewSheet} className="mx-5">
+            c
           </Button>
         </div>
       </Form>

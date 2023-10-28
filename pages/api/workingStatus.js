@@ -42,8 +42,12 @@ export default async function handler(req, res) {
     }
   } else if (req.method === 'GET') {
     // Handle the GET request to retrieve data from the spreadsheet
-    const sheetName = 'sheet1'; // Replace 'YourSheetName' with the actual name of the sheet
+    const currentDateTime = new Date();
+    const year = currentDateTime.getFullYear();
+    const month = currentDateTime.getMonth() + 1; // Months are 0-indexed, so add 1
+    const sheetName = `log ${year}/${month}`;
     let range = `${sheetName}!A:C`; // Modify the range as needed
+
     try {
       // Use spreadsheets.get to retrieve spreadsheet data
       const response = await googleSheets.spreadsheets.values.get({
@@ -69,5 +73,4 @@ export default async function handler(req, res) {
     res.status(405).end(); // Method Not Allowed
   }
 }
-
 
