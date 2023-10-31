@@ -44,7 +44,9 @@ export default function Page() {
           const isFirstDayOfMonth = today.getDate() === 1;
           if(status == "stop" && isFirstDayOfMonth){
             createNewSheet();
-          }
+          }else if(status == "stop"){
+            calculateWorkingHours()
+          } 
         })
         .catch((error) => {
           console.error('Error:', error);
@@ -57,7 +59,13 @@ export default function Page() {
     };
   }, []);
 
-
+  async function  calculateWorkingHours(){
+    // try{
+    //   const response =  await axios.post('/api/updateSummarySheet');
+    // }catch(error){
+    //   console.error(error);
+    // }
+     }
 
   async function createNewSheet() {
 
@@ -211,7 +219,6 @@ export default function Page() {
       console.error(error);
     }
   }
-
 
   async function getCurrentStatus() {
     const response = await axios.get('/api/workingStatus');
