@@ -4,7 +4,6 @@ import requests
 
 
 # Function to get the user's current status
-# Function to get the user's current status
 def getCurrentStatus():
     try:
         # Send an HTTP GET request to fetch the user's status
@@ -18,6 +17,7 @@ def getCurrentStatus():
             if user_data and len(user_data) > 0:
                 # Access the last element and its "message" key
                 user_current_status = user_data['data'][-1][1]
+                print(user_data)
                 return user_current_status
             else:
                 # Handle the case where the response is empty or doesn't contain "message"
@@ -50,7 +50,7 @@ def detect_local_changes(repo_path):
             if getCurrentStatus() != "start":
                 # Send an HTTP POST request to the Next.js API route
                 url = "http://localhost:4000/api/workingStatus"  # Update with the correct API route URL
-                data = data = {"message": "local changes detected"}
+                data = data = {"message": "standby"}
                 response = requests.post(url, json=data)
 
                 if response.status_code == 200:

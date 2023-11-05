@@ -42,7 +42,7 @@ export default function Page() {
           //if status == stop && is_first_of_month then make summary sheet
           const today = new Date();
           const isFirstDayOfMonth = today.getDate() === 1;
-          if(status == "stop" && isFirstDayOfMonth){
+          if(isFirstDayOfMonth){
             createNewSheet();
           }else if(status == "stop"){
             calculateWorkingHours()
@@ -277,7 +277,7 @@ export default function Page() {
   }
   return (
     <Container className="mt-4">
-      {userCurrentStatus === "local changes detected" && <Alert variant="primary">
+      {userCurrentStatus === "standby" && <Alert variant="primary">
         <Alert.Heading>Detect local changes!!!</Alert.Heading>
         <p>
           The system detected local changes on which you are working on git repository.<br></br>
@@ -313,9 +313,9 @@ export default function Page() {
           <Button
             onClick={handleToggleRun}
             variant={userCurrentStatus === "stop" ? "primary" : "danger"}
-            disabled={userCurrentStatus === "local changes detected"}
+            disabled={userCurrentStatus === "standby"}
           >
-            {userCurrentStatus == "local changes detected" ? "Start" : "stop"}
+            {userCurrentStatus == "standby" ? "Start" : "stop"}
           </Button>
           <Button variant="primary" onClick={() => handleAddTopicButton(null)} className="mx-5">
             Add Topic

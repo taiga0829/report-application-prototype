@@ -24,38 +24,49 @@ export default async function handler(req, res) {
             const logSheetName = `log ${year}/${month}`;
             const summarySheetName = `summary ${year}/${month}`;
 
-            // Create the AddSheetRequest for the log sheet
-            const logSheetRequest = {
-                properties: {
-                    title: logSheetName,
-                },
-            };
-
-            // Create the AddSheetRequest for the summary sheet
-            const summarySheetRequest = {
-                properties: {
-                    title: summarySheetName,
-                },
-            };
-
-            // Request to add both log and summary sheets
-            const request = {
+            // Check if the log sheet already exists
+            const sheetsList = await googleSheets.spreadsheets.get({
                 spreadsheetId,
-                resource: {
-                    requests: [
-                        {
-                            addSheet: logSheetRequest,
-                        },
-                        {
-                            addSheet: summarySheetRequest,
-                        },
-                    ],
-                },
-            };
+            });
 
-            const response = await googleSheets.spreadsheets.batchUpdate(request);
+            const logSheetExists = sheetsList.data.sheets.some(sheet => sheet.properties.title === logSheetName);
 
-            res.status(200).json({ message: 'Log and Summary sheets created successfully' });
+            if (logSheetExists) {
+                res.status(400).json({ message: `Sheet "${logSheetName}" already exists.` });
+            } else {
+                // Create the AddSheetRequest for the log sheet
+                const logSheetRequest = {
+                    properties: {
+                        title: logSheetName,
+                    },
+                };
+
+                // Create the AddSheetRequest for the summary sheet
+                const summarySheetRequest = {
+                    properties: {
+                        title: summarySheetName,
+                    },
+                };
+
+                // Request to add both log and summary sheets
+                const request = {
+                    spreadsheetId,
+                    resource: {
+                        requests: [
+                            {
+                                addSheet: logSheetRequest,
+                            },
+                            {
+                                addSheet: summarySheetRequest,
+                            },
+                        ],
+                    },
+                };
+
+                const response = await googleSheets.spreadsheets.batchUpdate(request);
+
+                res.status(200).json({ message: 'Log and Summary sheets created successfully' });
+            }
         } catch (error) {
             console.error(error);
             res.status(500).json({ message: 'Failed to create sheets' });
