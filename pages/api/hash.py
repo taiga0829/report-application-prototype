@@ -73,6 +73,14 @@ while True:
 
         if previous_hash == current_hash and cnt > 0:
             print('No changes.')
+            url = "http://localhost:4000/api/workingStatus"  # Update with the correct API route URL
+            data = data = {"message": "standby"}
+            response = requests.post(url, json=data)
+
+            if response.status_code == 200:
+                        print("POST request sent successfully")
+            else:
+                        print("Failed to send POST request")
         else:
             print('Changes detected.')
             if getCurrentStatus() != "start":
