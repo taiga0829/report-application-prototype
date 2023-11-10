@@ -2,6 +2,20 @@ import hashlib
 import subprocess
 import time
 import requests
+
+# Function to read the previous hash from the file
+def read_previous_hash(hash_file_path):
+    try:
+        with open(hash_file_path, 'r') as file:
+            return file.read().strip()
+    except FileNotFoundError:
+        return ''
+
+# Function to write the current hash to the file
+def write_current_hash(current_hash,hash_file_path):
+    with open(hash_file_path, 'w') as file:
+        file.write(current_hash)
+
 # Function to compute SHA-1 hash
 def compute_sha1(data):
     #encode()=> convert the string data into a bytes-like object.
@@ -39,10 +53,10 @@ def getCurrentStatus():
 
 # Get the path of the current Git repository as string
 git_repo_path = subprocess.check_output(['git', 'rev-parse', '--show-toplevel'], text=True).strip()
-
+hash_file_path = 'pages/api/hash.txt'
 # Previous hash (retrieve from storage, e.g., a file or database)
 #TODO: HOW TO KEEP AND RETRIEVE PREVIOUS HASH CODE 
-previous_hash = ''
+
 # Git diff command to get the changes
 
 #stdout=subprocess.PIPE: By setting stdout=subprocess.PIPE, you're capturing the standard output 
@@ -57,6 +71,8 @@ previous_hash = ''
 # method starts the command, waits for it to complete, and returns a tuple containing the captured stdout and stderr.
 #  In this case, the stdout variable will contain the standard output of the git diff command, and the stderr variable
 #  will contain any error messages if there were errors.
+# File to store the previous hash
+
 cnt=0
 while True:
     git_diff = subprocess.Popen(['git', 'diff', 'HEAD'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -66,10 +82,12 @@ while True:
     if git_diff.returncode == 0:
         # Compute SHA-1 hash of the changes
         current_hash = compute_sha1(stdout)
-
+        previous_hash = read_previous_hash(hash_file_path)
         print('Git Repository Path:', git_repo_path)
         print('Previous Hash:', previous_hash)
         print('Current Hash:', current_hash)
+        write_current_hash(current_hash,hash_file_path)
+
 
         if previous_hash == current_hash and cnt > 0:
             print('No changes.')
@@ -93,7 +111,7 @@ while True:
                         print("POST request sent successfully")
                     else:
                         print("Failed to send POST request")
-        previous_hash = current_hash
+       
     else:
         print('Error running git diff.')
     cnt+=1

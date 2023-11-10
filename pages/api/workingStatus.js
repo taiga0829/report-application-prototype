@@ -1,16 +1,18 @@
 import { google } from 'googleapis';
 import { DateTime } from 'luxon';
-import axios from 'axios';
+import {createCurrentDateSheet} from './createSheet'; 
+
 
 export default async function handler(req, res) {
   const auth = new google.auth.GoogleAuth({
     keyFile: 'credentials.json',
     scopes: 'https://www.googleapis.com/auth/spreadsheets',
   });
-
+  
   // Create client instance for auth
   const client = await auth.getClient();
 
+  
   // Instance of Google Sheets API
   const googleSheets = google.sheets({ version: 'v4', auth: client });
 
@@ -22,13 +24,16 @@ export default async function handler(req, res) {
     const messageAttribute = req.body.message;
 
     try {
+      //TODO: messageAttribute should just be validated
       const currentDateTime = new Date();
       const year = currentDateTime.getFullYear();
       const month = currentDateTime.getMonth() + 1; // Months are 0-indexed, so add 1
-      const sheetName = `log ${year}/${month}`;
+      const sheetName = `log_${year}/${month}`;
       let range = `${sheetName}!A:B`; // Modify the range as needed
       // Write row(s) to the spreadsheet
-      const result = googleSheets.spreadsheets.values.append({
+      //TODO: if file exsist-> do otherwise create file
+      //TODO: util file for chore function 
+      const result = await googleSheets.spreadsheets.values.append({
         auth,
         spreadsheetId,
         range: range,
@@ -44,21 +49,39 @@ export default async function handler(req, res) {
 
       res.status(200).json({ message: 'Successfully submitted! Thank you!' });
     } catch (error) {
-      
+        const errorMessage = error.response.data.error.message;
+        if(errorMessage.includes("Unable to parse range")){
+           const auth = new google.auth.GoogleAuth({
+             keyFile: 'credentials.json',
+             scopes: 'https://www.googleapis.com/auth/spreadsheets',
+           });
+           // Create client instance for auth
+           const client = await auth.getClient();
+        
+           // Instance of Google Sheets API
+           const googleSheets = google.sheets({ version: 'v4', auth: client });
+        
+          const spreadsheetId = process.env.SPREADSHEET_ID;
+          // Make an API request to the server-side endpoint to create a new sheet;
+          // send user status to new sheet
+          const currentDateTime = new Date();
+          const year = currentDateTime.getFullYear();
+          const month = currentDateTime.getMonth() + 1; // Months are 0-indexed, so add 1
+          const sheetName = `log_${year}/${month}`;
+          const sufix = `${year}/${month}`
+          let range = `${sheetName}!A:B`; // Modify the range as needed
+          createCurrentDateSheet(sufix)
+        }
         console.error('Specific Error:', error);
         res.status(400).json({ message: 'Invalid range specified' });
-     
     }
-     
   } else if (req.method === 'GET') {
     // Handle the GET request to retrieve data from the spreadsheet
     const currentDateTime = new Date();
     const year = currentDateTime.getFullYear();
     const month = currentDateTime.getMonth() + 1; // Months are 0-indexed, so add 1
-    const sheetName = `log ${year}/${month}`;
+    const sheetName = `log_${year}/${month}`;
     let range = `${sheetName}!A:C`; // Modify the range as needed
-
-
 
     try {
       // Use spreadsheets.get to retrieve spreadsheet data
@@ -80,7 +103,7 @@ export default async function handler(req, res) {
           const month = currentDateTime.getMonth() + 1; // Months are 0-indexed, so add 1
           const day = currentDateTime.getUTCDate();
 
-          const sheetName = `summary ${year}/${month}`;
+          const sheetName = `summary_${year}/${month}`;
           let range = `${sheetName}!A${day}:C${day}`; // Modify the range as needed
           const response = await googleSheets.spreadsheets.values.get({
             auth,
@@ -116,7 +139,7 @@ export default async function handler(req, res) {
             // Write row(s) to the spreadsheet
             const formattedWorkingHours = `${hours}:${minutes}`;
   
-            const result = googleSheets.spreadsheets.values.update({
+            const result = await googleSheets.spreadsheets.values.update({
               auth,
               spreadsheetId,
               range: range,
@@ -151,46 +174,27 @@ export default async function handler(req, res) {
 // Put the error handling code below the handler function
 process.on('unhandledRejection', async (reason, promise) => {
   if (reason instanceof Error && reason.message.includes('Unable to parse range')) {
-    try {
-      const auth = new google.auth.GoogleAuth({
-        keyFile: 'credentials.json',
-        scopes: 'https://www.googleapis.com/auth/spreadsheets',
-      });
-    
-      // Create client instance for auth
-      const client = await auth.getClient();
-    
-      // Instance of Google Sheets API
-      const googleSheets = google.sheets({ version: 'v4', auth: client });
-    
-      const spreadsheetId = process.env.SPREADSHEET_ID;
-      // Make an API request to the server-side endpoint to create a new sheet
-      const response = await axios.post('/api/createSheet');
-      // send user status to new sheet
-      const currentDateTime = new Date();
-      const year = currentDateTime.getFullYear();
-      const month = currentDateTime.getMonth() + 1; // Months are 0-indexed, so add 1
-      const sheetName = `log ${year}/${month}`;
-      let range = `${sheetName}!A:B`; // Modify the range as needed
+    // try {
+  
       // Write row(s) to the spreadsheet
-      const result = googleSheets.spreadsheets.values.append({
-        auth,
-        spreadsheetId,
-        range: range,
-        valueInputOption: 'RAW',
-        resource: {
-          values: [
-            [new Date().toISOString(), messageAttribute],
-          ],
-        },
-      });
-      const data = new Date().toISOString()
+      // const result = googleSheets.spreadsheets.values.append({
+      //   auth,
+      //   spreadsheetId,
+      //   range: range,
+      //   valueInputOption: 'RAW',
+      //   resource: {
+      //     values: [
+      //       [new Date().toISOString(), messageAttribute],
+      //     ],
+      //   },
+      // });
+      // const data = new Date().toISOString()
       //console.log(data);
 
       res.status(200).json({ message: 'Successfully submitted! Thank you!' });
-    } catch (error) {
-      console.error(error);
-    }
+    // } catch (error) {
+    //   console.error(error);
+    // }
   } else {
     // Handle other unhandled promise rejections
     console.error('Unhandled Rejection:', reason);
