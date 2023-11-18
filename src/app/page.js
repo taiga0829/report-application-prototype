@@ -39,14 +39,6 @@ export default function Page() {
         .then((status) => {
           setUserCurrentStatus(status);
           console.log("userCurrentStatus in interval:", status);
-          //if status == stop && is_first_of_month then make summary sheet
-          const today = new Date();
-          const isFirstDayOfMonth = today.getDate() === 1;
-          if(isFirstDayOfMonth){
-            createNewSheet();
-          }else if(status == "stop"){
-            calculateWorkingHours()
-          } 
         })
         .catch((error) => {
           console.error('Error:', error);
@@ -59,42 +51,12 @@ export default function Page() {
     };
   }, []);
 
-  async function  calculateWorkingHours(){
-    // try{
-    //   const response =  await axios.post('/api/updateSummarySheet');
-    // }catch(error){
-    //   console.error(error);
-    // }
-     }
-
   async function createNewSheet() {
 
     try {
       const response = await axios.post('/api/createSheet');
     } catch (error) {
       console.error(error);
-    }
-  }
-
-  // if the next day is next month create next sheet
-  // Function to check if the current date is the last day of the month
-  function isLastDayOfMonth(date) {
-    const nextDay = new Date(date);
-    nextDay.setDate(date.getDate() + 1);
-    return date.getMonth() !== nextDay.getMonth();
-  }
-
-  // Function to create a new sheet if today is the last day of the month
-  async function createNewSheetIfLastDayOfMonth() {
-    const today = new Date();
-
-    if (isLastDayOfMonth(today)) {
-      // Format the new sheet title with the next month and year (e.g., '11-2023')
-      const nextMonth = today.getMonth() === 11 ? 0 : today.getMonth() + 1;
-      const nextYear = today.getMonth() === 11 ? today.getFullYear() + 1 : today.getFullYear();
-      const sheetTitle = `${nextMonth + 1}-${nextYear}`;
-
-      await createNewSheet(sheetTitle);
     }
   }
 

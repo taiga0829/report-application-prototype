@@ -104,7 +104,7 @@ while True:
             if getCurrentStatus() != "start":
                     # Send an HTTP POST request to the Next.js API route
                     url = "http://localhost:4000/api/workingStatus"  # Update with the correct API route URL
-                    data = data = {"message": "standby"}
+                    data = data = {"message": "not standby"}
                     response = requests.post(url, json=data)
 
                     if response.status_code == 200:

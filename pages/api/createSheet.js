@@ -30,38 +30,70 @@ export async function createCurrentDateSheet(sheetNameSufix) {
     if (logSheetExists) {
         res.status(400).json({ message: `Sheet "${logSheetName}" already exists.` });
     } else {
-        // Create the AddSheetRequest for the log sheet
         const logSheetRequest = {
             properties: {
                 title: logSheetName,
             },
         };
-
-        // Create the AddSheetRequest for the summary sheet
         const summarySheetRequest = {
             properties: {
                 title: summarySheetName,
             },
         };
-
-        // Request to add both log and summary sheets
-        const request = {
+        
+        const requests = [
+            {
+                addSheet: logSheetRequest,
+            },
+            {
+                addSheet: summarySheetRequest,
+            },
+            //TODO: each updateCells, one equation is added. strings are added with append
+            {
+                updateCells: {
+                    fields: '*',
+                    start: {
+                        sheetId: spreadsheetId,
+                        rowIndex: 0, // Row index for C1
+                        columnIndex: 2, // Column index for C1
+                    },
+                    rows: [
+                        {
+                            values: [
+                                {
+                                    userEnteredValue: {
+                                        formulaValue: '=ARRAYFORMULA(A1:A)',
+                                    },
+                                },
+                            ],
+                        },
+                    ],
+                },
+            },
+        ];
+        
+        const batchUpdateRequest = {
             spreadsheetId,
             resource: {
-                requests: [
-                    {
-                        addSheet: logSheetRequest,
-                    },
-                    {
-                        addSheet: summarySheetRequest,
-                    },
-                ],
+                requests,
             },
         };
-        const response = await googleSheets.spreadsheets.batchUpdate(request);
+        
+        const response = await googleSheets.spreadsheets.batchUpdate(batchUpdateRequest);
+        
+        
+        const result = await googleSheets.spreadsheets.values.append({
+            auth,
+            spreadsheetId,
+            range: range,
+            valueInputOption: 'RAW',
+            resource: {
+              values: [
+                [new Date().toISOString(), "not standby"],
+              ],
+            },
+          });
         return response;
-
-
     }
 }
 
