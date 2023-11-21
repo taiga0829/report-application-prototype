@@ -6,6 +6,7 @@ import { Form, Button, Container, Alert } from 'react-bootstrap';
 import TopicCard from './topicCard';
 import ExportExcelButton from './ExportExcelButton';
 
+
 export default function Page() {
   const [topics, setTopics] = useState([
     {
@@ -21,44 +22,6 @@ export default function Page() {
   const [summary, setSummary] = useState("");
   const [isRunning, setIsRunning] = useState(true);
   const [userCurrentStatus, setUserCurrentStatus] = useState("");
-
-  useEffect(() => {
-    // Fetch user's status immediately when the component mounts
-    getCurrentStatus()
-      .then((status) => {
-        setUserCurrentStatus(status);
-        console.log("userCurrentStatus in useEffect:", status);
-      })
-      .catch((error) => {
-        console.error('Error:', error);
-      });
-
-    // Set up an interval to fetch user's status every 1 minute
-    const statusInterval = setInterval(() => {
-      getCurrentStatus()
-        .then((status) => {
-          setUserCurrentStatus(status);
-          console.log("userCurrentStatus in interval:", status);
-        })
-        .catch((error) => {
-          console.error('Error:', error);
-        });
-    }, 60000); // 1 minute in milliseconds
-
-    // Cleanup the interval when the component unmounts
-    return () => {
-      clearInterval(statusInterval);
-    };
-  }, []);
-
-  async function createNewSheet() {
-
-    try {
-      const response = await axios.post('/api/createSheet');
-    } catch (error) {
-      console.error(error);
-    }
-  }
 
   const handleRemoveButton = (topicId) => {
     const targetTopic = topics.find((t) => t.id === topicId);
@@ -96,6 +59,42 @@ export default function Page() {
     });
     setTopics(updatedTopics);
   };
+
+  // Set up the interval to fetch and update the user's current status
+  const statusInterval = setInterval(() => {
+    getCurrentStatus()
+      .then((status) => {
+        setUserCurrentStatus(status);
+        console.log("userCurrentStatus in interval:", status);
+      })
+      .catch((error) => {
+        console.error('Error:', error);
+      });
+    // Cleanup the interval when the component unmounts
+    return () => {
+      clearInterval(statusInterval); // Fix: Use statusInterval instead of summaryInterval
+    };
+  }, 60000); // 1 minute in milliseconds   
+
+  // Initialize lastCheckedMonth with the current month
+  let lastCheckedMonth = new Date().getMonth();
+
+  // Setup the interval for month change
+  const summaryInterval = setInterval(() => {
+    const currentMonth = new Date().getMonth();
+    if (currentMonth !== lastCheckedMonth) {
+      createSummarySheetRequest();
+      lastCheckedMonth = currentMonth;
+    }
+  }, 60000);
+
+  async function createSummarySheetRequest(){
+    try {
+      const response = await axios.post('/api/createSheet');
+    } catch (error) {
+      console.error(error);
+    }
+  }
 
   const handleLabelChange = (e, topicId) => {
     const updatedTopics = topics.map((topic) => {
@@ -182,10 +181,12 @@ export default function Page() {
     }
   }
 
+  //TODO: to acheive hash.py validation, i need to use getCurrentStatus() in server side.How can I use it from server side.
   async function getCurrentStatus() {
     const response = await axios.get('/api/workingStatus');
+    //console.log(response);
     const userData = response.data.data; // Assuming your data is in the 'data' property
-    console.log(userData);
+    //console.log(userData);
 
     if (userData.length > 0) {
       const userCurrentStatus = userData[userData.length - 1][1];
@@ -209,17 +210,6 @@ export default function Page() {
     }
   }
 
-  async function handleCreateNewFile() {
-    try {
-      // Make an API request to the server-side endpoint to create a new sheet
-      const response = await axios.post('/api/createFile', {
-      });
-      console.log(response.data.message); // Handle the response as needed
-    } catch (error) {
-      console.error(error);
-    }
-  }
-
   async function handleSubmit(e) {
     e.preventDefault();
     const response = await axios.post(
@@ -231,7 +221,7 @@ export default function Page() {
 
     );
     const response2 = await axios.post(
-      'api/workingStatus',
+      '/api/workingStatus',
       {
         message: "Finish"
       }

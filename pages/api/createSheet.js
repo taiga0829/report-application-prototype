@@ -1,6 +1,5 @@
 import { google } from 'googleapis';
 
-
 export async function createLogSheet(logSheetName) {
     const auth = new google.auth.GoogleAuth({
         keyFile: 'credentials.json',
@@ -30,11 +29,11 @@ export async function createLogSheet(logSheetName) {
                 title: logSheetName,
             },
         };
+
         const requests = [
             {
                 addSheet: logSheetRequest,
             },
-            //TODO: each updateCells, one equation is added. strings are added with append
             {
                 updateCells: {
                     fields: '*',
@@ -55,6 +54,8 @@ export async function createLogSheet(logSheetName) {
                         },
                     ],
                 },
+            },
+            {
                 updateCells: {
                     fields: '*',
                     start: {
@@ -503,19 +504,8 @@ export async function createLogSheet(logSheetName) {
                 requests,
             },
         };
-        
+
         const response = await googleSheets.spreadsheets.batchUpdate(batchUpdateRequest);
-        // const result = await googleSheets.spreadsheets.values.append({
-        //     auth,
-        //     spreadsheetId,
-        //     range: range,
-        //     valueInputOption: 'RAW',
-        //     resource: {
-        //       values: [
-        //         [new Date().toISOString(), "not standby"],
-        //       ],
-        //     },
-        //   });
         return response;
     }
 }
@@ -581,20 +571,22 @@ export async function createSummarySheet(summarySheetName) {
 
 export default async function handler(req, res) {
     if (req.method === 'POST') {
+        //POST:Create summary sheet GET:Create log Sheet 
         try {
-            // Generate sheet names based on the current time
-            const currentDateTime = new Date();
-            const year = currentDateTime.getFullYear();
-            const month = currentDateTime.getMonth() + 1; // Months are 0-indexed, so add 1
-            const sufix = `${year}/${month}`;
-            createCurrentDateSheet(sufix);
-            res.status(200).json({ message: 'Log and Summary sheets created successfully' });
+            createSummarySheet();
+            res.status(200).json({ message: 'Summary sheet was created successfully' });
         } catch (error) {
             console.error(error);
             res.status(500).json({ message: 'Failed to create sheets' });
         }
-    } else {
-        res.status(405).end(); // Method Not Allowed
+    }else if(req.method == "GET"){
+        try {
+            createLogSheet();
+            res.status(200).json({ message: 'Log sheet was created successfully' });
+        } catch (error) {
+            console.error(error);
+            res.status(500).json({ message: 'Failed to create sheets' });
+        }
     }
 }
 
