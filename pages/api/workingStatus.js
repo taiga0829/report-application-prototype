@@ -1,7 +1,6 @@
 import { google } from 'googleapis';
-import { createLogSheet, createSummarySheet } from './createSheet';
+import { createLogSheet, createSummarySheet, addFormulaAndString } from './createSheet';
 import { getLogSheetName, getSummarySheetName } from './Utils';
-
 
 export default async function handler(req, res) {
   const auth = new google.auth.GoogleAuth({
@@ -24,26 +23,44 @@ export default async function handler(req, res) {
 
     if (messageAttribute !== null) {
       const logSheetName = getLogSheetName();
+      const currentStatus = await getCurrentStatus();
+      // if user status is "start", cannot log "standby"
+      if (!(currentStatus === "start" && messageAttribute === "standby")) {
+        const logSheetExists = sheetsList.data.sheets.some(sheet => sheet.properties.title === logSheetName);
+        if (logSheetExists) {
+          const logSheetName = getLogSheetName();
+          // Accessing individual sheets
+          sheets.forEach((sheet, index) => {
+            const sheetTitle = sheet.properties.title;
+            if (logSheetExists) {
+              sheetId = sheet.properties.sheetId;
+            }
+            console.log(`Sheet ${index + 1} - Title: ${sheetTitle}, Sheet ID: ${sheetId}`);
+            console.log("a");
+          });
+          console.log("logSheetExists");
+          console.log(sheetId);
+          console.log("=======");
+          await addFormulaAndString(logSheetName, sheetId);
+          console.log("evebeve");
+          let range = `${logSheetName}!A:B`;
+          const result = await googleSheets.spreadsheets.values.append({
+            auth,
+            spreadsheetId,
+            range: range,
+            valueInputOption: 'RAW',
+            resource: {
+              values: [
+                [new Date().toISOString(), messageAttribute],
+              ],
+            },
+          });
+          const data = new Date().toISOString()
+          res.status(200).json({ message: 'Successfully submitted! Thank you!' });
+        }
 
-      const sheetsList = await googleSheets.spreadsheets.get({
-        spreadsheetId,
-      });
-      const logSheetExists = sheetsList.data.sheets.some(sheet => sheet.properties.title === logSheetName);
-      if (logSheetExists) {
-        let range = `${logSheetName}!A:B`;
-        const result = googleSheets.spreadsheets.values.append({
-          auth,
-          spreadsheetId,
-          range: range,
-          valueInputOption: 'RAW',
-          resource: {
-            values: [
-              [new Date().toISOString(), messageAttribute],
-            ],
-          },
-        });
-        const data = new Date().toISOString()
-        res.status(200).json({ message: 'Successfully submitted! Thank you!' });
+        const summarySheetName = getSummarySheetName();
+        createSummarySheet(summarySheetName);
       }
     } else {
       const spreadsheetId = process.env.SPREADSHEET_ID;
@@ -60,8 +77,25 @@ export default async function handler(req, res) {
     const sheetsList = await googleSheets.spreadsheets.get({
       spreadsheetId,
     });
-    //console.log(sheetsList);
-    const logSheetExists = sheetsList.data.sheets.some(sheet => sheet.properties.title === logSheetName);
+
+    const sheets = sheetsList.data.sheets;
+    let sheetId = 0;
+    let logSheetExists;
+    // Accessing individual sheets
+    sheets.forEach((sheet, index) => {
+      const sheetTitle = sheet.properties.title;
+      logSheetExists = sheet.properties.title === logSheetName;
+      if (logSheetExists) {
+        console.log("===");
+        sheetId = sheet.properties.sheetId;
+        addFormulaAndString(logSheetName, sheetId);
+        console.log("===");
+      }
+
+
+      console.log(`Sheet ${index + 1} - Title: ${sheetTitle}, Sheet ID: ${sheetId}`);
+    });
+    
     if (logSheetExists) {
       try {
         // Use spreadsheets.get to retrieve spreadsheet data
@@ -85,10 +119,25 @@ export default async function handler(req, res) {
     } else {
       // Make an API request to the server-side endpoint to create a new sheet;
       // send user status to new sheet
+
+      //TODO: cannot do two operation, create log sheet and add formula 
+      // try to add formula but cannot get ID of created sheet one time
       const logSheetName = getLogSheetName();
       let range = `${logSheetName}!A:B`; // Modify the range as needed
-      console.log("eev");
+
       await createLogSheet(logSheetName);
+      // Accessing individual sheets
+      sheets.forEach((sheet, index) => {
+        const sheetTitle = sheet.properties.title;
+        if (logSheetExists) {
+          sheetId = sheet.properties.sheetId;
+        }
+        console.log(`Sheet ${index + 1} - Title: ${sheetTitle}, Sheet ID: ${sheetId}`);
+      });
+      console.log(logSheetExists);
+      console.log(sheetId);
+      console.log("=======");
+      await addFormulaAndString(logSheetName, sheetId);
       console.log("evebeve");
     }
   } else {
@@ -97,6 +146,31 @@ export default async function handler(req, res) {
   }
 }
 
+export async function getCurrentStatus() {
+  const auth = new google.auth.GoogleAuth({
+    keyFile: 'credentials.json',
+    scopes: 'https://www.googleapis.com/auth/spreadsheets',
+  });
+  const spreadsheetId = process.env.SPREADSHEET_ID;
+  // Handle the GET request to retrieve data from the spreadsheet
+  const logSheetName = getLogSheetName();
+  let range = `${logSheetName}!A:C`; // Modify the range as needed
+  const response = await googleSheets.spreadsheets.values.get({
+    auth,
+    spreadsheetId,
+    range: range,
+  });
 
+  const userData = response.data.data; // Assuming your data is in the 'data' property
+
+  if (userData.length > 0) {
+    const userCurrentStatus = userData[userData.length - 1][1];
+    console.log(userCurrentStatus);
+    return userCurrentStatus;
+  } else {
+    // Handle the case where the array is empty
+    return null; // or any other appropriate value
+  }
+}
 
 

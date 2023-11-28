@@ -184,9 +184,7 @@ export default function Page() {
   //TODO: to acheive hash.py validation, i need to use getCurrentStatus() in server side.How can I use it from server side.
   async function getCurrentStatus() {
     const response = await axios.get('/api/workingStatus');
-    //console.log(response);
     const userData = response.data.data; // Assuming your data is in the 'data' property
-    //console.log(userData);
 
     if (userData.length > 0) {
       const userCurrentStatus = userData[userData.length - 1][1];
