@@ -1,10 +1,9 @@
 "use client"
 import 'bootstrap/dist/css/bootstrap.min.css';
-import React, { useState, useEffect } from 'react';
+import React, { useState} from 'react';
 import axios from 'axios';
 import { Form, Button, Container, Alert } from 'react-bootstrap';
-import TopicCard from './topicCard';
-import ExportExcelButton from './ExportExcelButton';
+import TopicCard from './topicCard';;
 
 
 export default function Page() {
@@ -22,6 +21,9 @@ export default function Page() {
   const [summary, setSummary] = useState("");
   const [isRunning, setIsRunning] = useState(true);
   const [userCurrentStatus, setUserCurrentStatus] = useState("");
+  const [isPresent,setIsPresent] = useState(false);
+
+
 
   const handleRemoveButton = (topicId) => {
     const targetTopic = topics.find((t) => t.id === topicId);
@@ -61,20 +63,54 @@ export default function Page() {
   };
 
   // Set up the interval to fetch and update the user's current status
-  const statusInterval = setInterval(() => {
-    getCurrentStatus()
-      .then((status) => {
-        setUserCurrentStatus(status);
-        console.log("userCurrentStatus in interval:", status);
-      })
-      .catch((error) => {
-        console.error('Error:', error);
-      });
+  const statusInterval = setInterval(async () => {
+    //TODO: try to rewrite it to await
+    // getCurrentStatus()
+    //   .then((status) => {
+    //     setUserCurrentStatus(status);
+    //     userOnlinehandle();
+    //     console.log("userCurrentStatus in interval:", status);
+    //   })
+    //   .catch((error) => {
+    //     console.error('Error:', error);
+    //   });
+    try{
+      const status = await getCurrentStatus();
+      setUserCurrentStatus(status);
+      userOnlinehandle();
+      console.log("userCurrentStatus in interval:", status);
+    }catch(error){
+      console.error('Error:', error);
+    }
+    
     // Cleanup the interval when the component unmounts
     return () => {
       clearInterval(statusInterval); // Fix: Use statusInterval instead of summaryInterval
     };
   }, 60000); // 1 minute in milliseconds   
+
+  async function userOnlinehandle(){
+    await getPresence();
+    if(isPresent){
+      try {
+        const response = await axios.post('/api/workingStatus', {
+          message: 'start',
+        });
+      } catch (error) {
+        console.error(error);
+      }
+    }else{
+      try {
+        const response = await axios.post('/api/workingStatus', {
+          message: 'stop',
+        });
+      } catch (error) {
+        console.error(error);
+      }
+    }
+  }
+
+
 
   // Initialize lastCheckedMonth with the current month
   let lastCheckedMonth = new Date().getMonth();
@@ -109,6 +145,15 @@ export default function Page() {
 
     setTopics(updatedTopics);
   };
+
+  async function getPresence(){
+    const response = await axios.get('/app/slackStatus');
+    if (response.slackData.presence === "active"){
+      setIsPresent(true);
+    }else{
+      setIsPresent(false);
+    }
+    }
 
   async function handleStartButton(e) {
     // send POST to spreadsheet to input "Start"
@@ -171,14 +216,7 @@ export default function Page() {
         console.error(error);
       });
 
-
-    try {
-      const response = await axios.post('/api/workingStatus', {
-        message: 'stop',
-      });
-    } catch (error) {
-      console.error(error);
-    }
+    
   }
 
   //TODO: to acheive hash.py validation, i need to use getCurrentStatus() in server side.How can I use it from server side.
@@ -193,18 +231,6 @@ export default function Page() {
     } else {
       // Handle the case where the array is empty
       return null; // or any other appropriate value
-    }
-  }
-
-  async function handleCreateNewSheet() {
-    try {
-      // Make an API request to the server-side endpoint to create a new sheet
-      const response = await axios.post('/api/createSheet', {
-        // Any necessary request data
-      });
-      console.log(response.data.message); // Handle the response as needed
-    } catch (error) {
-      console.error(error);
     }
   }
 
@@ -227,7 +253,7 @@ export default function Page() {
   }
   return (
     <Container className="mt-4">
-      {userCurrentStatus === "standby" && <Alert variant="primary">
+      {userCurrentStatus === "standby" && isOnline && <Alert variant="primary">
         <Alert.Heading>Detect local changes!!!</Alert.Heading>
         <p>
           The system detected local changes on which you are working on git repository.<br></br>
@@ -244,7 +270,7 @@ export default function Page() {
         </div>
       </Alert>
       }
-      <ExportExcelButton></ExportExcelButton>
+
       <Form onSubmit={handleSubmit}>
         {topics.filter((topic) => topic.childIds !== null).map((topic) => (
           <TopicCard key={topic.id}
@@ -260,17 +286,9 @@ export default function Page() {
           <Button variant="primary" className="mx-5">
             Summarize
           </Button>
-          <Button
-            onClick={handleToggleRun}
-            variant={userCurrentStatus === "stop" ? "primary" : "danger"}
-            disabled={userCurrentStatus === "standby"}
-          >
-            {userCurrentStatus == "standby" ? "Start" : "stop"}
-          </Button>
           <Button variant="primary" onClick={() => handleAddTopicButton(null)} className="mx-5">
             Add Topic
           </Button>
-
         </div>
         <div className="form-floating">
           <textarea
@@ -284,9 +302,6 @@ export default function Page() {
         <div className="d-flex justify-content-between mt-3">
           <Button variant="primary" type="submit" className="mx-5">
             Submit
-          </Button>
-          <Button variant="primary" onClick={handleCreateNewSheet} className="mx-5">
-            c
           </Button>
         </div>
       </Form>
