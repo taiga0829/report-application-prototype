@@ -1,6 +1,6 @@
 "use client"
 import 'bootstrap/dist/css/bootstrap.min.css';
-import React, { useState} from 'react';
+import React, { useState } from 'react';
 import axios from 'axios';
 import { Form, Button, Container, Alert } from 'react-bootstrap';
 import TopicCard from './topicCard';;
@@ -17,11 +17,11 @@ export default function Page() {
       childIds: [],
     },
   ]);
-  const [showAlert, setShowAlert] = useState(false);
+  const [alertMessage, setAlertMessage] = useState("");
   const [summary, setSummary] = useState("");
   const [isRunning, setIsRunning] = useState(true);
   const [userCurrentStatus, setUserCurrentStatus] = useState("");
-  const [isPresent,setIsPresent] = useState(false);
+  const [isPresent, setIsPresent] = useState(false);
 
 
 
@@ -64,12 +64,12 @@ export default function Page() {
 
   // Set up the interval to fetch and update the user's current status
   const statusInterval = setInterval(async () => {
-    try{
+    try {
       const status = await getCurrentStatus();
       setUserCurrentStatus(status);
       userOnlinehandle();
       console.log("userCurrentStatus in interval:", status);
-    }catch(error){
+    } catch (error) {
       console.error('Error:', error);
     }
     // Cleanup the interval when the component unmounts
@@ -78,23 +78,30 @@ export default function Page() {
     };
   }, 60000); // 1 minute in milliseconds   
 
-  async function userOnlinehandle(){
+  async function userOnlinehandle() {
+    const userCurrentStatus =  await getCurrentStatus;
+   
     await getPresence();
-    if(isPresent){
-      try {
-        const response = await axios.post('/api/workingStatus', {
-          message: 'start',
-        });
-      } catch (error) {
-        console.error(error);
+    if (isPresent) {
+      if (userCurrentStatus !== "start"){
+        try {
+          const response = await axios.post('/api/workingStatus', {
+            message: 'start',
+          });
+        } catch (error) {
+         setAlertMessage(error);
+        }
       }
-    }else{
-      try {
-        const response = await axios.post('/api/workingStatus', {
-          message: 'stop',
-        });
-      } catch (error) {
-        console.error(error);
+    } else {
+      if(userCurrentStatus!=="stop"){
+        try {
+        
+          const response = await axios.post('/api/workingStatus', {
+            message: 'stop',
+          });
+        } catch (error) {
+          setAlertMessage(error);
+        }
       }
     }
   }
@@ -111,11 +118,11 @@ export default function Page() {
     }
   }, 60000);
 
-  async function createSummarySheetRequest(){
+  async function createSummarySheetRequest() {
     try {
       const response = await axios.post('/api/createSheet');
     } catch (error) {
-      console.error(error);
+      setAlertMessage(error);
     }
   }
 
@@ -129,19 +136,18 @@ export default function Page() {
       }
       return topic;
     });
-
     setTopics(updatedTopics);
   };
 
-  async function getPresence(){
+  async function getPresence() {
     const response = await axios.get('/app/slackStatus');
-    if (response.slackData.presence === "active"){
+    if (response.slackData.presence === "active") {
       setIsPresent(true);
-    }else{
+    } else {
       setIsPresent(false);
     }
-    }
-  
+  }
+
   async function handleStartButton(e) {
     // send POST to spreadsheet to input "Start"
     try {
@@ -149,7 +155,7 @@ export default function Page() {
         message: 'start',
       });
     } catch (error) {
-      console.error(error);
+      setAlertMessage(error);
     }
     //set status "start"
     setUserCurrentStatus("start");
@@ -200,10 +206,10 @@ export default function Page() {
         console.log("userCurrentStatus in handleToggleRun:", status);
       })
       .catch((error) => {
-        console.error(error);
+        setAlertMessage(error);
       });
 
-    
+
   }
 
   //TODO: to acheive hash.py validation, i need to use getCurrentStatus() in server side.How can I use it from server side.
@@ -225,21 +231,24 @@ export default function Page() {
 
     //TODO: error handling if it is error, show alert
     e.preventDefault();
-    const response = await axios.post(
-      '/api/request',
-      {
-        topics,
-        summary
-      }
-
-    );
-    //TODO: error handling if it is error, show alert
-    const response2 = await axios.post(
-      '/api/workingStatus',
-      {
-        message: "Finish"
-      }
-    )
+    try {
+      const response = await axios.post(
+        '/api/request',
+        {
+          topics,
+          summary
+        }
+      );
+    } catch (error) {
+      setAlertMessage(error);
+    }
+    try {
+      const response = await axios.post('/api/workingStatus', {
+        message: 'start',
+      });
+    } catch (error) {
+      setAlertMessage(error);
+    }
   }
   return (
     <Container className="mt-4">
@@ -251,7 +260,7 @@ export default function Page() {
         </p>
         <hr />
         <div className="d-flex justify-content-end">
-          <Button variant="danger" onClick={() => setUserCurrentStatus("stop")} className="mr-5">
+          <Button variant="danger" onClick={() => setUserCurrentStatus("standby")} className="mr-5">
             Close
           </Button>
           <Button variant="primary" onClick={handleStartButton}>
@@ -260,7 +269,6 @@ export default function Page() {
         </div>
       </Alert>
       }
-
       <Form onSubmit={handleSubmit}>
         {topics.filter((topic) => topic.childIds !== null).map((topic) => (
           <TopicCard key={topic.id}
@@ -295,6 +303,12 @@ export default function Page() {
           </Button>
         </div>
       </Form>
+      {alertMessage && (
+        <Alert variant="danger" dismissible>
+          <Alert.Heading>Error!</Alert.Heading>
+          <p>{alertMessage}</p>
+        </Alert>
+      )}
     </Container>
   );
 }

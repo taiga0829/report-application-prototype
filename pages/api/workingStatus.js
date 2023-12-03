@@ -1,5 +1,5 @@
 import { google } from 'googleapis';
-import { createLogSheet, createSummarySheet} from './createSheet';
+import { createLogSheet, createSummarySheet } from './createSheet';
 import { getLogSheetName, getSummarySheetName } from './Utils';
 
 export default async function handler(req, res) {
@@ -17,14 +17,14 @@ export default async function handler(req, res) {
   const sheetsList = await googleSheets.spreadsheets.get({
     spreadsheetId,
   });
-  const sheets =sheetsList.data.sheets;
+  const sheets = sheetsList.data.sheets;
 
   if (req.method === 'POST') {
     // Handle the POST request to write data to the spreadsheet
     const { request, name } = req.body;
     //TODO: add validation if messageAttribute get trashy values, just ignore and return 400(BAD request)
     const messageAttribute = req.body.message;
-    if (messageAttribute !== null) {
+    if (messageAttribute === "start" || messageAttribute === "stop" || messageAttribute === "not standby" || messageAttribute === "standby") {
       const logSheetName = getLogSheetName();
       const currentStatus = await getCurrentStatus();
       // if user status is "start", cannot log "standby"
@@ -44,7 +44,7 @@ export default async function handler(req, res) {
           console.log("logSheetExists");
           console.log(sheetId);
           console.log("=======");
-          await addFormulaAndString(logSheetName, sheetId,auth);
+          await addFormulaAndStringLog(logSheetName, sheetId, auth);
           console.log("evebeve");
           let range = `${logSheetName}!A:B`;
           const result = await googleSheets.spreadsheets.values.append({
@@ -59,24 +59,42 @@ export default async function handler(req, res) {
             },
           });
           const data = new Date().toISOString()
-          
+
         }
         const summarySheetName = getSummarySheetName();
-        await createSummarySheet(summarySheetName);
+        const summarySheetExists = sheetsList.data.sheets.some(sheet => sheet.properties.title === summarySheetName);
+        if (summarySheetExists) {
+          // Accessing individual sheets
+          sheets.forEach((sheet, index) => {
+            const sheetTitle = sheet.properties.title;
+            if (summarySheetExists) {
+              sheetId = sheet.properties.sheetId;
+            }
+            console.log(`Sheet ${index + 1} - Title: ${sheetTitle}, Sheet ID: ${sheetId}`);
+          });
+        await addFormulaAndStringSummary(sheetId,auth)
         res.status(200).json({ message: 'Successfully submitted! Thank you!' });
+      }else{
+        try {
+          await createSummarySheet(summarySheetName);
+        } catch (error) {
+          console.error('Specific Error:', error);
+        }
+        res.status(400).json({ message: 'Invalid range specified' });
       }
+    }
     } else {
       const spreadsheetId = process.env.SPREADSHEET_ID;
       const logSheetName = getLogSheetName();
-      try{
+      try {
         await createLogSheet(logSheetName);
-      }catch(error){
+      } catch (error) {
         console.error('Specific Error:', error);
       }
-      res.status(400).json({ message: 'Invalid range specified' });
+      res.status(400).json({ message: 'Invalid values' });
     }
-    
-   
+
+
 
   } else if (req.method === 'GET') {
     // Handle the GET request to retrieve data from the spreadsheet
@@ -94,13 +112,13 @@ export default async function handler(req, res) {
       if (logSheetExists) {
         console.log("===");
         sheetId = sheet.properties.sheetId;
-        addFormulaAndString(logSheetName, sheetId,auth);
+        addFormulaAndStringLog(logSheetName, sheetId, auth);
         console.log("===");
       }
 
       console.log(`Sheet ${index + 1} - Title: ${sheetTitle}, Sheet ID: ${sheetId}`);
     });
-    
+
     if (logSheetExists) {
       try {
         // Use spreadsheets.get to retrieve spreadsheet data
@@ -142,7 +160,7 @@ export default async function handler(req, res) {
       console.log(logSheetExists);
       console.log(sheetId);
       console.log("=======");
-      await addFormulaAndString(logSheetName, sheetId,auth);
+      await addFormulaAndStringLog(logSheetName, sheetId, auth);
       console.log("evebeve");
     }
   }
@@ -169,500 +187,779 @@ export async function getCurrentStatus() {
 
   console.log("||||||||||||||");
   const logValues = response.data.values;
-  
+
   console.log(logValues);
-  //console.log(userData);
   if (logValues) {
-    //TODO: error
     const userCurrentStatus = logValues[logValues.length - 1][1];
     console.log(userCurrentStatus);
     return userCurrentStatus;
   } else {
-    // Handle the case where the array is empty
-    return null; // or any other appropriate value
+    return null; 
   }
 }
 
-export async function addFormulaAndString(logSheetName,sheetId,auth) {
-  try{
-      const client = await auth.getClient();
-      const range = `${logSheetName}C1:G10`;
-      // Instance of Google Sheets API
-      const googleSheets = google.sheets({ version: 'v4', auth: client });
-      const spreadsheetId = process.env.SPREADSHEET_ID;
-      console.log(sheetId);
-      const requests = [
-        {
-          updateCells: {
-            fields: '*',
-            rows: [
-              {
-                values: [
-                  {
-                    userEnteredValue: {
-                      formulaValue: '=ARRAYFORMULA(A1:A)',
-                    },
+export async function addFormulaAndStringSummary(sheetId, auth) {
+  try {
+    const client = await auth.getClient();
+    // Instance of Google Sheets API
+    const googleSheets = google.sheets({ version: 'v4', auth: client });
+    const spreadsheetId = process.env.SPREADSHEET_ID;
+    console.log(sheetId);
+    const currentDateTime = new Date();
+    const month = currentDateTime.getMonth() + 1;
+    const year = currentDateTime.getFullYear();
+    const requests = [
+      {
+        updateCells: {
+          fields: '*',
+          rows: [
+            {
+              values: [
+                {
+                  userEnteredValue: {
+                    formulaValue: `='log_${year}/${month}/1'!I2`,
                   },
-                  {
-                    userEnteredValue: {
-                      stringValue: '',
-                    },
+                },
+                {
+                  userEnteredValue: {
+                    stringValue: "",
                   },
-                  {
-                    userEnteredValue: {
-                      stringValue: 'start',
-                    },
+                },
+                {
+                  userEnteredValue: {
+                    stringValue: "合計就業時間",
                   },
-                  {
-                    userEnteredValue: {
-                      formulaValue: '=COUNTIF(B1:B, E1)',
-                    },
+                },
+                {
+                  userEnteredValue: {
+                    formulaValue: "=SUM(B:B)",
                   },
-                  {
-                    userEnteredValue: {
-                      stringValue: '',
-                    },
-                  },
-                  {
-                    userEnteredValue: {
-                      stringValue: '業務時間',
-                    },
-                  },
-                  {
-                    userEnteredValue: {
-                      formulaValue: '=F5-F4 + IF(F8, F12, 0) - IF(F7, F11, 0)',
-                    },
-                  },
-                  // Add more values as needed for your range
-                ],
-              },
-              // Add another set of values for the next row
-              {
-                values: [
-                  {
-                    userEnteredValue: {
-                      stringValue: '',
-                    },
-                  },
-                  {
-                    userEnteredValue: {
-                      stringValue: '',
-                    },
-                  },
-                  {
-                    userEnteredValue: {
-                      stringValue: 'stop',
-                    },
-                  },
-                  {
-                    userEnteredValue: {
-                      formulaValue: '=COUNTIF(B2:B, E2)',
-                    },
-                  },
-                  {
-                    userEnteredValue: {
-                      stringValue: '',
-                    },
-                  },
-                  {
-                    userEnteredValue: {
-                      stringValue: '報告業務時間',
-                    },
-                  },
-                  {
-                    userEnteredValue: {
-                      formulaValue: '=IF(I1>=L12, L12, I1)',
-                    },
-                  },
-                  // Add more values as needed for your range
-                ],
-              },
-              {
-                values: [
-                  {
-                    userEnteredValue: {
-                      stringValue: '',
-                    },
-                  },
-                  // Add more values as needed for your range
-                ],
-              },
-              {
-                values: [
-                  {
-                    userEnteredValue: {
-                      stringValue: '',
-                    },
-                  },
-                  {
-                    userEnteredValue: {
-                      stringValue: '',
-                    },
-                  },
-                  {
-                    userEnteredValue: {
-                      stringValue: 'start時間合計',
-                    },
-                  },
-                  {
-                    userEnteredValue: {
-                      formulaValue: '=INDEX(QUERY(A1:C, "select sum(Col3) where Col2=\'start\'", 0), 2, 1)',
-                    },
-                  },
-                  // Add more values as needed for your range
-                ],
-              },
-              {
-                values: [
-                  {
-                    userEnteredValue: {
-                      stringValue: '',
-                    },
-                  },
-                  {
-                    userEnteredValue: {
-                      stringValue: '',
-                    },
-                  },
-                  {
-                    userEnteredValue: {
-                      stringValue: 'stop時間合計',
-                    },
-                  },
-                  {
-                    userEnteredValue: {
-                      formulaValue: '=INDEX(QUERY(A2:C, "select sum(Col3) WHERE Col2=\'stop\'"), 2,1)',
-                    },
-                  },
-                  // Add more values as needed for your range
-                ],
-              },
-              {
-                values: [
-                  {
-                    userEnteredValue: {
-                      stringValue: '',
-                    },
-                  },
-                  // Add more values as needed for your range
-                ],
-              },
-              {
-                values: [
-                  {
-                    userEnteredValue: {
-                      stringValue: '',
-                    },
-                  },
-                  {
-                    userEnteredValue: {
-                      stringValue: '',
-                    },
-                  },
-                  {
-                    userEnteredValue: {
-                      stringValue: 'stopで始まっている',
-                    },
-                  },
-                  {
-                    userEnteredValue: {
-                      formulaValue: '=EXACT(B1, "stop")',
-                    },
-                  },
-                  // Add more values as needed for your range
-                ],
-              },
-              {
-                values: [
-                  {
-                    userEnteredValue: {
-                      stringValue: '',
-                    },
-                  },
-                  {
-                    userEnteredValue: {
-                      stringValue: '',
-                    },
-                  },
-                  {
-                    userEnteredValue: {
-                      stringValue: 'stopで終わっていない',
-                    },
-                  },
-                  {
-                    userEnteredValue: {
-                      formulaValue: '=NOT(EXACT(INDEX(B:B, COUNTA(B:B)), "stop"))',
-                    },
-                  },
-                  // Add more values as needed for your range
-                ],
-              },
-              {
-                values: [
-                  {
-                    userEnteredValue: {
-                      stringValue: '',
-                    },
-                  }
-                ],
-              },
-              {
-                values: [
-                  {
-                    userEnteredValue: {
-                      stringValue: '',
-                    },
-                  }
-                ],
-              },
-              {
-                values: [
-                  {
-                    userEnteredValue: {
-                      stringValue: '',
-                    },
-                  }, 
-                  {
-                    userEnteredValue: {
-                      stringValue: '',
-                    },
-                  },
-                  {
-                    userEnteredValue: {
-                      stringValue: '仮想start',
-                    },
-                  },
-                  {
-                    userEnteredValue: {
-                      formulaValue: '=L16',
-                    },
-                  },
-                ],
-                
-              },
-              {
-                values: [
-                  {
-                    userEnteredValue: {
-                      stringValue: '',
-                    },
-                  }, 
-                  {
-                    userEnteredValue: {
-                      stringValue: '',
-                    },
-                  },
-                  {
-                    userEnteredValue: {
-                      stringValue: '仮想stop',
-                    },
-                  },
-                  {
-                    userEnteredValue: {
-                      formulaValue: '=L16+1',
-                    },
-                  },
-                  {
-                    userEnteredValue: {
-                      stringValue: '',
-                    },
-                  },
-                  {
-                    userEnteredValue: {
-                      stringValue: '',
-                    },
-                  },
-                  {
-                    userEnteredValue: {
-                      stringValue: '',
-                    },
-                  },
-                  {
-                    userEnteredValue: {
-                      stringValue: '',
-                    },
-                  },
-                  {
-                    userEnteredValue: {
-                      stringValue: '最大業務時間',
-                    },
-                  },
-                  {
-                    userEnteredValue: {
-                      stringValue: '06:00:00.000',
-                    },
-                  },
-                ],
-              },
-              {
-                values: [
-                  {
-                    userEnteredValue: {
-                      stringValue: '',
-                    },
-                  }
-                ],
-              },
-              {
-                values: [
-                  {
-                    userEnteredValue: {
-                      stringValue: '',
-                    },
-                  }
-                ],
-              },
-              {
-                values: [
-                  {
-                    userEnteredValue: {
-                      stringValue: '',
-                    },
-                  }
-                ],
-              },
-              {
-                values: [
-                  {
-                    userEnteredValue: {
-                      stringValue: '',
-                    },
-                  }
-                ],
-              },
-              {
-                values: [
-                  {
-                    userEnteredValue: {
-                      stringValue: '',
-                    },
-                  }, 
-                  {
-                    userEnteredValue: {
-                      stringValue: '',
-                    },
-                  },
-                  {
-                    userEnteredValue: {
-                      stringValue: '仮想stop',
-                    },
-                  },
-                  {
-                    userEnteredValue: {
-                      formulaValue: '=L16+1',
-                    },
-                  },
-                  {
-                    userEnteredValue: {
-                      stringValue: '',
-                    },
-                  },
-                  {
-                    userEnteredValue: {
-                      stringValue: '',
-                    },
-                  },
-                  {
-                    userEnteredValue: {
-                      stringValue: '',
-                    },
-                  },
-                  {
-                    userEnteredValue: {
-                      stringValue: '',
-                    },
-                  },
-                  {
-                    userEnteredValue: {
-                      stringValue: '日付',
-                    },
-                  },
-                  {
-                    userEnteredValue: {
-                      stringValue: '2023/12/30',
-                    },
-                  },
-                ],
-              },
-              // Add more sets of values for additional rows
-            ],
-            range: {
-              sheetId: sheetId,
-              startRowIndex: 0,
-              endRowIndex: 30,
-              startColumnIndex: 2,
-              endColumnIndex: 30,
+                },
+              ],
             },
+            {
+              values: [
+                {
+                  userEnteredValue: {
+                    formulaValue: `='log_${year}/${month}/2'!I2`,
+                  },
+                },
+              ],
+            },
+            {
+              values: [
+                {
+                  userEnteredValue: {
+                    formulaValue: `='log_${year}/${month}/3'!I2`,
+                  },
+                },
+              ],
+            },
+            {
+              values: [
+                {
+                  userEnteredValue: {
+                    formulaValue: `='log_${year}/${month}/4'!I2`,
+                  },
+                },
+              ],
+            },
+            {
+              values: [
+                {
+                  userEnteredValue: {
+                    formulaValue: `='log_${year}/${month}/5'!I2`,
+                  },
+                },
+              ],
+            },
+            {
+              values: [
+                {
+                  userEnteredValue: {
+                    formulaValue: `='log_${year}/${month}/6'!I2`,
+                  },
+                },
+              ],
+            },
+            {
+              values: [
+                {
+                  userEnteredValue: {
+                    formulaValue: `='log_${year}/${month}/7'!I2`,
+                  },
+                },
+              ],
+            },
+            {
+              values: [
+                {
+                  userEnteredValue: {
+                    formulaValue: `='log_${year}/${month}/8'!I2`,
+                  },
+                },
+              ],
+            },
+            {
+              values: [
+                {
+                  userEnteredValue: {
+                    formulaValue: `='log_${year}/${month}/9'!I2`,
+                  },
+                },
+              ],
+            },
+            {
+              values: [
+                {
+                  userEnteredValue: {
+                    formulaValue: `='log_${year}/${month}/10'!I2`,
+                  },
+                },
+              ],
+            },
+            {
+              values: [
+                {
+                  userEnteredValue: {
+                    formulaValue: `='log_${year}/${month}/11'!I2`,
+                  },
+                },
+              ],
+            },
+            {
+              values: [
+                {
+                  userEnteredValue: {
+                    formulaValue: `='log_${year}/${month}/12'!I2`,
+                  },
+                },
+              ],
+            },
+            {
+              values: [
+                {
+                  userEnteredValue: {
+                    formulaValue: `='log_${year}/${month}/13'!I2`,
+                  },
+                },
+              ],
+            },
+            {
+              values: [
+                {
+                  userEnteredValue: {
+                    formulaValue: `='log_${year}/${month}/14'!I2`,
+                  },
+                },
+              ],
+            },
+            {
+              values: [
+                {
+                  userEnteredValue: {
+                    formulaValue: `='log_${year}/${month}/15'!I2`,
+                  },
+                },
+              ],
+            },
+            {
+              values: [
+                {
+                  userEnteredValue: {
+                    formulaValue: `='log_${year}/${month}/16'!I2`,
+                  },
+                },
+              ],
+            },
+            {
+              values: [
+                {
+                  userEnteredValue: {
+                    formulaValue: `='log_${year}/${month}/17'!I2`,
+                  },
+                },
+              ],
+            },
+            {
+              values: [
+                {
+                  userEnteredValue: {
+                    formulaValue: `='log_${year}/${month}/18'!I2`,
+                  },
+                },
+              ],
+            },
+            {
+              values: [
+                {
+                  userEnteredValue: {
+                    stringValue: `='log_${year}/${month}/19'!I2`,
+                  },
+                },
+              ],
+            },
+            {
+              values: [
+                {
+                  userEnteredValue: {
+                    formulaValue: `='log_${year}/${month}/20'!I2`,
+                  },
+                },
+              ],
+            },
+            {
+              values: [
+                {
+                  userEnteredValue: {
+                    formulaValue: `='log_${year}/${month}/21'!I2`,
+                  },
+                },
+              ],
+            },
+            {
+              values: [
+                {
+                  userEnteredValue: {
+                    formulaValue: `='log_${year}/${month}/22'!I2`,
+                  },
+                },
+              ],
+            },
+            {
+              values: [
+                {
+                  userEnteredValue: {
+                    formulaValue: `='log_${year}/${month}/23'!I2`,
+                  },
+                },
+              ],
+            },
+            {
+              values: [
+                {
+                  userEnteredValue: {
+                    formulaValue: `='log_${year}/${month}/24'!I2`,
+                  },
+                },
+              ],
+            },
+            {
+              values: [
+                {
+                  userEnteredValue: {
+                    formulaValue: `='log_${year}/${month}/25'!I2`,
+                  },
+                },
+              ],
+            },
+            {
+              values: [
+                {
+                  userEnteredValue: {
+                    formulaValue: `='log_${year}/${month}/26'!I2`,
+                  },
+                },
+              ],
+            },
+            {
+              values: [
+                {
+                  userEnteredValue: {
+                    formulaValue: `='log_${year}/${month}/27'!I2`,
+                  },
+                },
+              ],
+            },
+            {
+              values: [
+                {
+                  userEnteredValue: {
+                    formulaValue: `='log_${year}/${month}/28'!I2`,
+                  },
+                },
+              ],
+            },
+            {
+              values: [
+                {
+                  userEnteredValue: {
+                    formulaValue: `='log_${year}/${month}/29'!I2`,
+                  },
+                },
+              ],
+            },
+            {
+              values: [
+                {
+                  userEnteredValue: {
+                    formulaValue: `='log_${year}/${month}/30'!I2`,
+                  },
+                },
+              ],
+            },
+            {
+              values: [
+                {
+                  userEnteredValue: {
+                    formulaValue: `='log_${year}/${month}/31'!I2`,
+                  },
+                },
+              ],
+            },
+          ],
+          range: {
+            sheetId: sheetId,
+            startRowIndex: 0,
+            endRowIndex: 30,
+            startColumnIndex: 1,
+            endColumnIndex: 30,
           },
         },
-      ];
-      
-      const batchUpdateRequest = {
-        spreadsheetId,
-        requestBody: {
-          requests: requests,
-        },
-      };
-      
-      const response = await googleSheets.spreadsheets.batchUpdate(batchUpdateRequest);
-      return response;
-      
-      // const requests = [
-      //     {
-      //         updateCells: {
-      //             fields: '*',
-      //             rows: [
-      //                 {
-      //                     values: [
-      //                         ['=ARRAYFORMULA(A1:A)', '=COUNTIF(B1:B, E1)', '=COUNTIF(B2:B, E2)', '=INDEX(QUERY(A1:C, "select sum(Col3) where Col2=\'start\'", 0), 2, 1)'],
-      //                         // ['=EXACT(B1, "stop")', '=NOT(EXACT(INDEX(B:B, COUNTA(B:B)), "stop"))', '=L16', '=L16+1', '=F5-F4 + IF(F8, F12, 0) - IF(F7, F11, 0)', 'working hours', '=IF(I1>=L12, L12, I1)'],
-      //                         // ['06:00:00.000', '2023/12/30', 'start', 'stop', 'Total start time', 'Total stop time'],
-      //                         // ['Starting with "stop"', 'assuming START', 'No starting with "stop"', 'assuming STOP', 'working hours', 'Report working hours'],
-      //                     ],
-      //                 },
-      //             ],
-      //             range: {
-      //                 sheetId: sheetId,
-      //                 startRowIndex: 0,
-      //                 endRowIndex: 17, // Adjusted to cover 16 rows
-      //                 startColumnIndex: 2,
-      //                 endColumnIndex: 17, // Adjusted to include only one column
-      //             }
-      //         },
-      //         updateCells: {
-      //           fields: '*',
-      //           start: {
-      //               sheetId: spreadsheetId,
-      //               rowIndex: 0, // Row index for E4
-      //               columnIndex: 7, // Column index for E4
-      //           },
-      //           rows: [
-      //               {
-      //                   values: [
-      //                       {
-      //                           userEnteredValue: {
-      //                               stringValue: 'working hours',
-      //                           },
-      //                       },
-      //                   ],
-      //               },
-      //           ],
-      //       },
-      //     },
-      // ];
-  
-      // const batchUpdateRequest = {
-      //     spreadsheetId,
-      //     requestBody: {
-      //         requests:requests,
-      //     },
-      // };
-  
-      // const response = await googleSheets.spreadsheets.values.batchUpdate(batchUpdateRequest);
-      // return response; 
+      },
+    ];
 
-  }catch(error){
-      console.error(error);
+    const batchUpdateRequest = {
+      spreadsheetId,
+      requestBody: {
+        requests: requests,
+      },
+    };
+
+    const response = await googleSheets.spreadsheets.batchUpdate(batchUpdateRequest);
+    return response;
+
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+
+export async function addFormulaAndStringLog(logSheetName, sheetId, auth) {
+  try {
+    const client = await auth.getClient();
+    const range = `${logSheetName}C1:G10`;
+    // Instance of Google Sheets API
+    const googleSheets = google.sheets({ version: 'v4', auth: client });
+    const spreadsheetId = process.env.SPREADSHEET_ID;
+    console.log(sheetId);
+    const requests = [
+      {
+        updateCells: {
+          fields: '*',
+          rows: [
+            {
+              values: [
+                {
+                  userEnteredValue: {
+                    formulaValue: '=ARRAYFORMULA(A1:A)',
+                  },
+                },
+                {
+                  userEnteredValue: {
+                    stringValue: '',
+                  },
+                },
+                {
+                  userEnteredValue: {
+                    stringValue: 'start',
+                  },
+                },
+                {
+                  userEnteredValue: {
+                    formulaValue: '=COUNTIF(B1:B, E1)',
+                  },
+                },
+                {
+                  userEnteredValue: {
+                    stringValue: '',
+                  },
+                },
+                {
+                  userEnteredValue: {
+                    stringValue: '業務時間',
+                  },
+                },
+                {
+                  userEnteredValue: {
+                    formulaValue: '=F5-F4 + IF(F8, F12, 0) - IF(F7, F11, 0)',
+                  },
+                },
+                // Add more values as needed for your range
+              ],
+            },
+            // Add another set of values for the next row
+            {
+              values: [
+                {
+                  userEnteredValue: {
+                    stringValue: '',
+                  },
+                },
+                {
+                  userEnteredValue: {
+                    stringValue: '',
+                  },
+                },
+                {
+                  userEnteredValue: {
+                    stringValue: 'stop',
+                  },
+                },
+                {
+                  userEnteredValue: {
+                    formulaValue: '=COUNTIF(B2:B, E2)',
+                  },
+                },
+                {
+                  userEnteredValue: {
+                    stringValue: '',
+                  },
+                },
+                {
+                  userEnteredValue: {
+                    stringValue: '報告業務時間',
+                  },
+                },
+                {
+                  userEnteredValue: {
+                    formulaValue: '=IF(I1>=L12, L12, I1)',
+                  },
+                },
+                // Add more values as needed for your range
+              ],
+            },
+            {
+              values: [
+                {
+                  userEnteredValue: {
+                    stringValue: '',
+                  },
+                },
+                // Add more values as needed for your range
+              ],
+            },
+            {
+              values: [
+                {
+                  userEnteredValue: {
+                    stringValue: '',
+                  },
+                },
+                {
+                  userEnteredValue: {
+                    stringValue: '',
+                  },
+                },
+                {
+                  userEnteredValue: {
+                    stringValue: 'start時間合計',
+                  },
+                },
+                {
+                  userEnteredValue: {
+                    formulaValue: '=INDEX(QUERY(A1:C, "select sum(Col3) where Col2=\'start\'", 0), 2, 1)',
+                  },
+                },
+                // Add more values as needed for your range
+              ],
+            },
+            {
+              values: [
+                {
+                  userEnteredValue: {
+                    stringValue: '',
+                  },
+                },
+                {
+                  userEnteredValue: {
+                    stringValue: '',
+                  },
+                },
+                {
+                  userEnteredValue: {
+                    stringValue: 'stop時間合計',
+                  },
+                },
+                {
+                  userEnteredValue: {
+                    formulaValue: '=INDEX(QUERY(A2:C, "select sum(Col3) WHERE Col2=\'stop\'"), 2,1)',
+                  },
+                },
+                // Add more values as needed for your range
+              ],
+            },
+            {
+              values: [
+                {
+                  userEnteredValue: {
+                    stringValue: '',
+                  },
+                },
+                // Add more values as needed for your range
+              ],
+            },
+            {
+              values: [
+                {
+                  userEnteredValue: {
+                    stringValue: '',
+                  },
+                },
+                {
+                  userEnteredValue: {
+                    stringValue: '',
+                  },
+                },
+                {
+                  userEnteredValue: {
+                    stringValue: 'stopで始まっている',
+                  },
+                },
+                {
+                  userEnteredValue: {
+                    formulaValue: '=EXACT(B1, "stop")',
+                  },
+                },
+              ],
+            },
+            {
+              values: [
+                {
+                  userEnteredValue: {
+                    stringValue: '',
+                  },
+                },
+                {
+                  userEnteredValue: {
+                    stringValue: '',
+                  },
+                },
+                {
+                  userEnteredValue: {
+                    stringValue: 'stopで終わっていない',
+                  },
+                },
+                {
+                  userEnteredValue: {
+                    formulaValue: '=NOT(EXACT(INDEX(B:B, COUNTA(B:B)), "stop"))',
+                  },
+                },
+                // Add more values as needed for your range
+              ],
+            },
+            {
+              values: [
+                {
+                  userEnteredValue: {
+                    stringValue: '',
+                  },
+                }
+              ],
+            },
+            {
+              values: [
+                {
+                  userEnteredValue: {
+                    stringValue: '',
+                  },
+                }
+              ],
+            },
+            {
+              values: [
+                {
+                  userEnteredValue: {
+                    stringValue: '',
+                  },
+                },
+                {
+                  userEnteredValue: {
+                    stringValue: '',
+                  },
+                },
+                {
+                  userEnteredValue: {
+                    stringValue: '仮想start',
+                  },
+                },
+                {
+                  userEnteredValue: {
+                    formulaValue: '=L16',
+                  },
+                },
+              ],
+
+            },
+            {
+              values: [
+                {
+                  userEnteredValue: {
+                    stringValue: '',
+                  },
+                },
+                {
+                  userEnteredValue: {
+                    stringValue: '',
+                  },
+                },
+                {
+                  userEnteredValue: {
+                    stringValue: '仮想stop',
+                  },
+                },
+                {
+                  userEnteredValue: {
+                    formulaValue: '=L16+1',
+                  },
+                },
+                {
+                  userEnteredValue: {
+                    stringValue: '',
+                  },
+                },
+                {
+                  userEnteredValue: {
+                    stringValue: '',
+                  },
+                },
+                {
+                  userEnteredValue: {
+                    stringValue: '',
+                  },
+                },
+                {
+                  userEnteredValue: {
+                    stringValue: '',
+                  },
+                },
+                {
+                  userEnteredValue: {
+                    stringValue: '最大業務時間',
+                  },
+                },
+                {
+                  userEnteredValue: {
+                    stringValue: '06:00:00.000',
+                  },
+                },
+              ],
+            },
+            {
+              values: [
+                {
+                  userEnteredValue: {
+                    stringValue: '',
+                  },
+                }
+              ],
+            },
+            {
+              values: [
+                {
+                  userEnteredValue: {
+                    stringValue: '',
+                  },
+                }
+              ],
+            },
+            {
+              values: [
+                {
+                  userEnteredValue: {
+                    stringValue: '',
+                  },
+                }
+              ],
+            },
+            {
+              values: [
+                {
+                  userEnteredValue: {
+                    stringValue: '',
+                  },
+                }
+              ],
+            },
+            {
+              values: [
+                {
+                  userEnteredValue: {
+                    stringValue: '',
+                  },
+                },
+                {
+                  userEnteredValue: {
+                    stringValue: '',
+                  },
+                },
+                {
+                  userEnteredValue: {
+                    stringValue: '仮想stop',
+                  },
+                },
+                {
+                  userEnteredValue: {
+                    formulaValue: '=L16+1',
+                  },
+                },
+                {
+                  userEnteredValue: {
+                    stringValue: '',
+                  },
+                },
+                {
+                  userEnteredValue: {
+                    stringValue: '',
+                  },
+                },
+                {
+                  userEnteredValue: {
+                    stringValue: '',
+                  },
+                },
+                {
+                  userEnteredValue: {
+                    stringValue: '',
+                  },
+                },
+                {
+                  userEnteredValue: {
+                    stringValue: '日付',
+                  },
+                },
+                {
+                  userEnteredValue: {
+                    stringValue: '2023/12/30',
+                  },
+                },
+              ],
+            },
+            // Add more sets of values for additional rows
+          ],
+          range: {
+            sheetId: sheetId,
+            startRowIndex: 0,
+            endRowIndex: 30,
+            startColumnIndex: 2,
+            endColumnIndex: 30,
+          },
+        },
+      },
+    ];
+
+    const batchUpdateRequest = {
+      spreadsheetId,
+      requestBody: {
+        requests: requests,
+      },
+    };
+
+    const response = await googleSheets.spreadsheets.batchUpdate(batchUpdateRequest);
+    return response;
+
+  } catch (error) {
+    console.error(error);
   }
 }
 
