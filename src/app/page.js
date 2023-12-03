@@ -64,16 +64,6 @@ export default function Page() {
 
   // Set up the interval to fetch and update the user's current status
   const statusInterval = setInterval(async () => {
-    //TODO: try to rewrite it to await
-    // getCurrentStatus()
-    //   .then((status) => {
-    //     setUserCurrentStatus(status);
-    //     userOnlinehandle();
-    //     console.log("userCurrentStatus in interval:", status);
-    //   })
-    //   .catch((error) => {
-    //     console.error('Error:', error);
-    //   });
     try{
       const status = await getCurrentStatus();
       setUserCurrentStatus(status);
@@ -82,7 +72,6 @@ export default function Page() {
     }catch(error){
       console.error('Error:', error);
     }
-    
     // Cleanup the interval when the component unmounts
     return () => {
       clearInterval(statusInterval); // Fix: Use statusInterval instead of summaryInterval
@@ -109,8 +98,6 @@ export default function Page() {
       }
     }
   }
-
-
 
   // Initialize lastCheckedMonth with the current month
   let lastCheckedMonth = new Date().getMonth();
@@ -154,7 +141,7 @@ export default function Page() {
       setIsPresent(false);
     }
     }
-
+  
   async function handleStartButton(e) {
     // send POST to spreadsheet to input "Start"
     try {
@@ -235,6 +222,8 @@ export default function Page() {
   }
 
   async function handleSubmit(e) {
+
+    //TODO: error handling if it is error, show alert
     e.preventDefault();
     const response = await axios.post(
       '/api/request',
@@ -244,6 +233,7 @@ export default function Page() {
       }
 
     );
+    //TODO: error handling if it is error, show alert
     const response2 = await axios.post(
       '/api/workingStatus',
       {

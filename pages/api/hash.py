@@ -115,6 +115,6 @@ while True:
     else:
         print('Error running git diff.')
     cnt+=1
-    time.sleep(6)  # 600 seconds = 10 minutes
+    time.sleep(600)  # 600 seconds = 10 minutes
 
 

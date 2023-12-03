@@ -22,6 +22,7 @@ export default async function handler(req, res) {
   if (req.method === 'POST') {
     // Handle the POST request to write data to the spreadsheet
     const { request, name } = req.body;
+    //TODO: add validation if messageAttribute get trashy values, just ignore and return 400(BAD request)
     const messageAttribute = req.body.message;
     if (messageAttribute !== null) {
       const logSheetName = getLogSheetName();
