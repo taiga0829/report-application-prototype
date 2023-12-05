@@ -1,6 +1,7 @@
 import { google } from 'googleapis';
 import { createLogSheet, createSummarySheet } from './createSheet';
 import { getLogSheetName, getSummarySheetName } from './Utils';
+//import {getCurrentStatus} from './page';
 
 export default async function handler(req, res) {
   const auth = new google.auth.GoogleAuth({
@@ -17,8 +18,9 @@ export default async function handler(req, res) {
   const sheetsList = await googleSheets.spreadsheets.get({
     spreadsheetId,
   });
-  const sheets = sheetsList.data.sheets;
 
+
+  const sheets = sheetsList.data.sheets;
   if (req.method === 'POST') {
     // Handle the POST request to write data to the spreadsheet
     const { request, name } = req.body;
@@ -26,9 +28,12 @@ export default async function handler(req, res) {
     const messageAttribute = req.body.message;
     if (messageAttribute === "start" || messageAttribute === "stop" || messageAttribute === "not standby" || messageAttribute === "standby") {
       const logSheetName = getLogSheetName();
+      console.log("=========");
       const currentStatus = await getCurrentStatus();
+      console.log("=========");
       // if user status is "start", cannot log "standby"
       let sheetId = "";
+      // user status is not standby or stop
       if (!(currentStatus === "start" && messageAttribute === "standby")) {
         const logSheetExists = sheetsList.data.sheets.some(sheet => sheet.properties.title === logSheetName);
         if (logSheetExists) {
@@ -72,17 +77,17 @@ export default async function handler(req, res) {
             }
             console.log(`Sheet ${index + 1} - Title: ${sheetTitle}, Sheet ID: ${sheetId}`);
           });
-        await addFormulaAndStringSummary(sheetId,auth)
-        res.status(200).json({ message: 'Successfully submitted! Thank you!' });
-      }else{
-        try {
-          await createSummarySheet(summarySheetName);
-        } catch (error) {
-          console.error('Specific Error:', error);
+          await addFormulaAndStringSummary(sheetId, auth)
+          res.status(200).json({ message: 'Successfully submitted! Thank you!' });
+        } else {
+          try {
+            await createSummarySheet(summarySheetName);
+          } catch (error) {
+            console.error('Specific Error:', error);
+          }
+          res.status(400).json({ message: 'Invalid range specified' });
         }
-        res.status(400).json({ message: 'Invalid range specified' });
       }
-    }
     } else {
       const spreadsheetId = process.env.SPREADSHEET_ID;
       const logSheetName = getLogSheetName();
@@ -194,7 +199,7 @@ export async function getCurrentStatus() {
     console.log(userCurrentStatus);
     return userCurrentStatus;
   } else {
-    return null; 
+    return null;
   }
 }
 
